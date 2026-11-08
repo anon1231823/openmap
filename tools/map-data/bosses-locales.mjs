@@ -95,6 +95,7 @@ const aliases = new Map([
   ["sneed", "sneedsshredder"],
   ["gizrultheslavener", "gizrul"],
   ["overlordramtusk", ["overloadramtusk", "warlordramtusk"]],
+  ["warderstilgiss", "wardenstilgiss"],
   ["mordreshfireeye", "mordressfireeye"],
   ["amnennarthecoldbringer", "amnenarthecoldbringer"],
   ["kirtonos", "kirtonostheherald"],
