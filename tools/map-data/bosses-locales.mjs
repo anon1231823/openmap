@@ -119,6 +119,6 @@ for (const locale of locales.filter((locale) => locale !== "enUS")) {
   }
   lines.push("\t},");
 }
-lines.push("}", "", "local bosses = translated[GetLocale and GetLocale() or \"enUS\"]", "if bosses then", "\tfor mapID, names in pairs(bosses) do ns.MapPlaces.bosses[mapID] = names end", "end", "");
+lines.push("}", "", "local bosses = translated[GetLocale and GetLocale() or \"enUS\"]", "if bosses then", "\tfor mapID, names in pairs(bosses) do ns.MapPlaces.bosses[mapID] = names end", "end");
 writeFileSync(out, `${lines.join("\n")}\n`);
 console.error(`wrote ${out}: ${bosses.length} maps, ${translated} localized map entries`);

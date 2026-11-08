@@ -6,7 +6,7 @@ local _, ns = ...
 ns.MapChangelog = {
 	{ version = "Unreleased", date = "", heads = { [1] = "Fixed", }, items = {
 		"|cff6e2c0aDungeon maps use the client's language|r: Forever's dungeon floors and wings now use the translated names and map artwork from the client's own game files, including Blackrock Spire and Dire Maul.",
-		"|cff6e2c0aDungeon and raid bosses use the client's language|r: Forever now includes the contributor-authored DBM-based boss translations for every supported locale, with English fallback where no translation is available.",
+		"|cff6e2c0aDungeon and raid bosses use the client's language|r: Forever now includes the contributor-authored DBM-based boss translations for every supported locale, with English fallback where no translation is available. Season of Discovery-only encounters and duplicate combined encounters were removed from Blackfathom Deeps, Gnomeregan, and Sunken Temple.",
 	} },
 	{ version = "v0.8.2", date = "2026-11-08", heads = { [1] = "Improved", [2] = "Fixed", }, items = {
 		"|cff6e2c0aPanning no longer hitches|r: the map set up to 300 textures' files in a single frame where a pan brought new ground into view, and each set is a load and an upload, so that frame showed as a hitch of about 35 ms. It sets 60 a frame now; the art still fades in, a few frames later.",

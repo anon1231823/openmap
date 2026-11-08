@@ -10,7 +10,8 @@
 
 - **Dungeon and raid bosses use the client's language**: Forever now includes the contributor-authored
   DBM-based boss translations for every supported locale, with English fallback where no translation
-  is available.
+  is available. Season of Discovery-only encounters and duplicate combined encounters were removed
+  from Blackfathom Deeps, Gnomeregan, and Sunken Temple.
 
 ## v0.8.2 (2026-11-08)
 
