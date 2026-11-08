@@ -77,6 +77,11 @@ for (const [key, record] of byId) {
   sourceByEnglish[kind].set(name, values);
 }
 
+// DBM keeps the original Blackfathom Deeps encounters in its raid locale table even though
+// OpenMap lists the instance as a dungeon.  Try the instance's source first, then the other
+// source, so those Vanilla encounters do not lose their translations.
+const sourcesFor = (kind) => [sourceByEnglish[kind], sourceByEnglish[kind === "raid" ? "dungeon" : "raid"]];
+
 const places = readFileSync("OpenMap/Data/Forever/Places.lua", "utf8");
 const instanceSection = places.slice(places.indexOf("\tinstances = {"), places.indexOf("\tbosses = {"));
 const raidMaps = new Set([...instanceSection.matchAll(/\{\s*(\d+),\s*"(?:[^"\\]|\\.)*",\s*true\b/g)].map((match) => match[1]));
@@ -109,9 +114,11 @@ let translated = 0;
 for (const locale of locales.filter((locale) => locale !== "enUS")) {
   lines.push(`\t${locale} = {`);
   for (const { id, names } of bosses) {
-    const source = sourceByEnglish[raidMaps.has(String(id)) ? "raid" : "dungeon"];
+    const sources = sourcesFor(raidMaps.has(String(id)) ? "raid" : "dungeon");
     const localized = names.map((name) => {
-      const candidates = source.get(normalize(name)) ?? source.get(aliases.get(normalize(name)) ?? "");
+      const normalized = normalize(name);
+      const alias = aliases.get(normalized) ?? "";
+      const candidates = sources.map((source) => source.get(normalized) ?? source.get(alias)).find(Boolean);
       const values = candidates?.[localeNames[locale]];
       return values?.size ? [...values][0] : name;
     });
