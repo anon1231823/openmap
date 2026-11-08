@@ -147,6 +147,11 @@ const fallbackTranslations = {
     de: "Steinbuckel", es: "Pidrespina", mx: "Pidrespina", fr: "Échine-de-pierre", it: "Spinapietra",
     br: "Petrespáduas", ru: "Каменный Гребень", kr: "뾰족바위", cn: "石脊", tw: "石脊",
   },
+  princessmoirabronzebeard: {
+    de: "Prinzessin Moira Bronzebart", es: "Princesa Moira Barbabronce", mx: "Princesa Moira Barbabronce",
+    fr: "Princesse Moira Barbe-de-Bronze", it: "Principessa Moira Barbabronzea", br: "Princesa Moira Barbabronze",
+    ru: "Принцесса Мойра Бронзобород", kr: "공주 모이라 브론즈비어드", cn: "铁炉堡公主茉艾拉·铜须", tw: "茉艾拉·銅鬚公主",
+  },
 };
 
 const lua = (value) => `{ ${value.map((name) => JSON.stringify(name)).join(", ")} }`;
