@@ -1,5 +1,17 @@
 # OpenMap changelog
 
+## Unreleased
+
+### Fixed
+
+- **Dungeon maps use the client's language**: Forever's dungeon floors and wings now use the
+  translated names and map artwork from the client's own game files, including Blackrock Spire
+  and Dire Maul.
+
+- **Dungeon and raid bosses use the client's language**: Forever now includes the contributor-authored
+  DBM-based boss translations for every supported locale, with English fallback where no translation
+  is available.
+
 ## v0.8.2 (2026-11-08)
 
 ### Improved

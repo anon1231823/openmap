@@ -492,5 +492,11 @@
  "The colour unexplored areas are darkened with.": "Цвет, которым затемняются неисследованные области.",
  "Default colour": "Цвет по умолчанию",
  "dungeon and cave maps in every language (they showed green on some languages' clients)": "карты подземелий и пещер на всех языках (в клиентах на некоторых языках они были зелёными)",
- "the map's hitches while panning, found and measured with /openmap bench": "подтормаживания карты при прокрутке, найденные и измеренные с помощью /openmap bench"
+ "the map's hitches while panning, found and measured with /openmap bench": "подтормаживания карты при прокрутке, найденные и измеренные с помощью /openmap bench",
+ "Blackrock Spire": "Вершина Черной Горы",
+ "Lower Blackrock Spire": "Нижняя часть пика Черной горы",
+ "Upper Blackrock Spire": "Верхняя часть пика Черной горы",
+ "Dire Maul - East": "Забытый Город (Восток)",
+ "Dire Maul - North": "Забытый Город (Север)",
+ "Dire Maul - West": "Забытый Город (Запад)"
 }

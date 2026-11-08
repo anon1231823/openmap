@@ -492,5 +492,11 @@
  "The colour unexplored areas are darkened with.": "El color con el que se oscurecen las áreas sin explorar.",
  "Default colour": "Color predeterminado",
  "dungeon and cave maps in every language (they showed green on some languages' clients)": "mapas de calabozos y cuevas en todos los idiomas (se veían verdes en los clientes de algunos idiomas)",
- "the map's hitches while panning, found and measured with /openmap bench": "los tirones del mapa al desplazarlo, encontrados y medidos con /openmap bench"
+ "the map's hitches while panning, found and measured with /openmap bench": "los tirones del mapa al desplazarlo, encontrados y medidos con /openmap bench",
+ "Blackrock Spire": "Cumbre de Roca Negra",
+ "Lower Blackrock Spire": "Cumbre de Roca Negra Inferior",
+ "Upper Blackrock Spire": "Cumbre de Roca Negra Superior",
+ "Dire Maul - East": "La Masacre (Este)",
+ "Dire Maul - North": "La Masacre (Norte)",
+ "Dire Maul - West": "La Masacre (Oeste)"
 }

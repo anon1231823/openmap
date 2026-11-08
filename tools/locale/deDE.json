@@ -492,5 +492,11 @@
  "The colour unexplored areas are darkened with.": "Die Farbe, mit der unerforschte Gebiete abgedunkelt werden.",
  "Default colour": "Standardfarbe",
  "dungeon and cave maps in every language (they showed green on some languages' clients)": "Dungeon- und Höhlenkarten in jeder Sprache (auf den Clients mancher Sprachen waren sie grün)",
- "the map's hitches while panning, found and measured with /openmap bench": "die Ruckler der Karte beim Verschieben, gefunden und gemessen mit /openmap bench"
+ "the map's hitches while panning, found and measured with /openmap bench": "die Ruckler der Karte beim Verschieben, gefunden und gemessen mit /openmap bench",
+ "Blackrock Spire": "Blackrockspitze",
+ "Lower Blackrock Spire": "Untere Blackrockspitze",
+ "Upper Blackrock Spire": "Obere Blackrockspitze",
+ "Dire Maul - East": "Düsterbruch (Ost)",
+ "Dire Maul - North": "Düsterbruch (Nord)",
+ "Dire Maul - West": "Düsterbruch (West)"
 }

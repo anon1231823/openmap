@@ -492,5 +492,11 @@
  "The colour unexplored areas are darkened with.": "A cor usada para escurecer as áreas inexploradas.",
  "Default colour": "Cor padrão",
  "dungeon and cave maps in every language (they showed green on some languages' clients)": "mapas de masmorras e cavernas em todos os idiomas (apareciam verdes nos clientes de alguns idiomas)",
- "the map's hitches while panning, found and measured with /openmap bench": "os travamentos do mapa ao arrastá-lo, encontrados e medidos com /openmap bench"
+ "the map's hitches while panning, found and measured with /openmap bench": "os travamentos do mapa ao arrastá-lo, encontrados e medidos com /openmap bench",
+ "Blackrock Spire": "Pico da Rocha Negra",
+ "Lower Blackrock Spire": "Pico da Rocha Negra Inferior",
+ "Upper Blackrock Spire": "Pico da Rocha Negra Superior",
+ "Dire Maul - East": "Gládio Cruel (Leste)",
+ "Dire Maul - North": "Gládio Cruel (Norte)",
+ "Dire Maul - West": "Gládio Cruel (Oeste)"
 }

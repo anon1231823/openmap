@@ -1,7 +1,8 @@
--- The cave and dungeon maps' tiles from OpenMap's own folder (Media/Textures/Forever/MapTile), not
--- the game's: WoW Forever doesn't list them for every language, so some clients (esMX, ruRU,
--- itIT) draw them as solid green squares. Swaps each file ID in Caves.lua's and DungeonMaps.lua's
--- tile lists for its copy (tools/map-tiles/build.py copies them; RADD95's OpenMap TextureFix found it).
+-- Fallback copies of the cave and dungeon maps from OpenMap's own folder (Media/Textures/Forever/MapTile).
+-- WoW Forever doesn't list them for every language, so some clients (esMX, ruRU, itIT) draw them as
+-- solid green squares. Dungeon maps first try the client's native localized paths in Map/Dungeons.lua;
+-- this swaps each remaining file ID in Caves.lua's and DungeonMaps.lua's tile lists for its copy
+-- (tools/map-tiles/build.py copies them; RADD95's OpenMap TextureFix found it).
 -- Written by hand (not generated); loads after Caves.lua and DungeonMaps.lua.
 
 local _, ns = ...

@@ -46,6 +46,7 @@
 --------------------------------------------------------------------------------
 
 local _, ns = ...
+local L = ns.L
 
 local S = {}
 ns.MapStitch = S
@@ -1094,6 +1095,9 @@ S.AWAY_MAP = AWAY_MAP              -- (Dungeons.lua: the map opened while you st
 -- (the group finder's name for part of a dungeon, "Dire Maul - East") keeps its own name in English,
 -- and in another language is the dungeon's name with the wing's after it
 function S.InstanceName(inst)
+	local translated = ns.MapPlaces and ns.MapPlaces.instanceNames
+	local localized = translated and translated[inst[2]]
+	if localized and localized ~= inst[2] then return localized end
 	local name = GetRealZoneText and inst[1] > 0 and ns.Safe.Call(GetRealZoneText, inst[1])   -- (0: not in the tables)
 	if not name or name == "" then return inst[2] end
 	if inst.wing == nil then
@@ -1107,7 +1111,6 @@ function S.InstanceName(inst)
 	end
 	return inst.wing or name
 end
-local L = ns.L
 
 local function DockEnter(pin)
 	GameTooltip:SetOwner(pin, "ANCHOR_RIGHT")

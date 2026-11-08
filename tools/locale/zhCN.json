@@ -492,5 +492,11 @@
  "The colour unexplored areas are darkened with.": "未探索区域变暗时使用的颜色。",
  "Default colour": "默认颜色",
  "dungeon and cave maps in every language (they showed green on some languages' clients)": "所有语言下的地下城和洞穴地图（部分语言的客户端上曾显示为绿色）",
- "the map's hitches while panning, found and measured with /openmap bench": "拖动地图时的卡顿，用 /openmap bench 找到并测量"
+ "the map's hitches while panning, found and measured with /openmap bench": "拖动地图时的卡顿，用 /openmap bench 找到并测量",
+ "Blackrock Spire": "黑石塔",
+ "Lower Blackrock Spire": "黑石塔下层",
+ "Upper Blackrock Spire": "黑石塔上层",
+ "Dire Maul - East": "厄运之槌（东）",
+ "Dire Maul - North": "厄运之槌（北）",
+ "Dire Maul - West": "厄运之槌（西）"
 }

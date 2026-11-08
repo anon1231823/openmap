@@ -492,5 +492,11 @@
  "The colour unexplored areas are darkened with.": "Il colore con cui vengono scurite le aree inesplorate.",
  "Default colour": "Colore predefinito",
  "dungeon and cave maps in every language (they showed green on some languages' clients)": "le mappe di spedizioni e grotte in ogni lingua (apparivano verdi nei client di alcune lingue)",
- "the map's hitches while panning, found and measured with /openmap bench": "gli scatti della mappa durante lo spostamento, trovati e misurati con /openmap bench"
+ "the map's hitches while panning, found and measured with /openmap bench": "gli scatti della mappa durante lo spostamento, trovati e misurati con /openmap bench",
+ "Blackrock Spire": "Guglia Roccianera",
+ "Lower Blackrock Spire": "Bastioni di Roccianera Inferiori",
+ "Upper Blackrock Spire": "Bastioni di Roccianera Superiori",
+ "Dire Maul - East": "Maglio Infausto (Est)",
+ "Dire Maul - North": "Maglio Infausto (Nord)",
+ "Dire Maul - West": "Maglio Infausto (Ovest)"
 }

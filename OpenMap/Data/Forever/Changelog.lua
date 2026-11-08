@@ -4,6 +4,10 @@
 local _, ns = ...
 
 ns.MapChangelog = {
+	{ version = "Unreleased", date = "", heads = { [1] = "Fixed", }, items = {
+		"|cff6e2c0aDungeon maps use the client's language|r: Forever's dungeon floors and wings now use the translated names and map artwork from the client's own game files, including Blackrock Spire and Dire Maul.",
+		"|cff6e2c0aDungeon and raid bosses use the client's language|r: Forever now includes the contributor-authored DBM-based boss translations for every supported locale, with English fallback where no translation is available.",
+	} },
 	{ version = "v0.8.2", date = "2026-11-08", heads = { [1] = "Improved", [2] = "Fixed", }, items = {
 		"|cff6e2c0aPanning no longer hitches|r: the map set up to 300 textures' files in a single frame where a pan brought new ground into view, and each set is a load and an upload, so that frame showed as a hitch of about 35 ms. It sets 60 a frame now; the art still fades in, a few frames later.",
 		"|cff6e2c0aThe map no longer stalls a moment after it opens|r: since 0.8.0 OpenMap keeps the map's art loaded while it's closed, then let go of it all in one frame a second into the opening, which the game unloaded at once (about a second's freeze). It now lets go of it a little at a time.",
@@ -51,15 +55,5 @@ ns.MapChangelog = {
 		"|cff6e2c0aFaster to load|r: only your language's translations are read (the other nine were a quarter of OpenMap's code), and its look through every addon's map icons for combat waits till you're in the world, not the loading screen (a player's report: half a second more load time).",
 		"|cff6e2c0aThe zones' detail comes in sooner|r when the map first opens up close: it took a couple of seconds after a login or reload.",
 		"|cff6e2c0a/openmap status says what loading costs|r: OpenMap's files, the login, the map's setup and building the map (a player found it added load time: this shows where).",
-	} },
-	{ version = "v0.7.3-beta", date = "2026-10-22", heads = { [1] = "New", [5] = "Fixed", }, items = {
-		"|cff6e2c0aKey bindings|r (the game's Keybindings > OpenMap): Find me, Drop a pin, Pins, Quill, Quest log and the map's menu, each opening the map first if it's closed (players' requests).",
-		"|cff6e2c0aThe quill draws on dungeons' maps|r: with a dungeon's map up, what you draw goes on its picture and is kept with that dungeon, not on the world map behind it (a player's request).",
-		"|cff6e2c0aOnly places you've found|r (the menu's On the map tab, under Places): dungeon entrances, docks and zeppelin towers once you've explored where they are, flight masters once you've learned them. Off unless you turn it on (a player's request).",
-		"|cff6e2c0aTownsfolk from another addon's NPC database|r: an addon with a database in Questie's shape can give it to OpenMap (OpenMapAPI.RegisterTownsfolkProvider, docs/api.md), so townsfolk and rare mobs show without Questie (a player's request).",
-		"|cff6e2c0aSmooth zooming at any Take colour out|r: the zones' fast pre-drawn art was only used at the setting's default (10%); at any other, every zone was drawn from its hundreds of pieces and the frame rate dropped as their detail came in. It's now used at every setting.",
-		"|cff6e2c0aFull screen stays full screen|r, and the quest log you closed stays closed, the next time the map opens: it went back to the window and the quest log each time (a player's report).",
-		"|cff6e2c0aImproves performance|r under Fade icons while zooming no longer stays on show over the menu's other tabs (a player's report).",
-		"|cff6e2c0aRiverglades and Zephras Isle show their levels|r on the zone hover (35-45 and 1-12, from the Warcraft Wiki; a player's report).",
 	} },
 }
