@@ -389,11 +389,14 @@ local function ShowFloor(i, quiet)
 end
 
 -- OpenMap's Forever maps are drawn from the client's files, but their floor names are the
--- English keys used to join the art to the map data.  The UiMap ID beside each floor lets the
--- client supply the localized name from its own Map table, just as Leatrix Maps does.
+-- English keys used to join the art to the map data.  Keep an explicit floor name ahead of the
+-- client lookup: imported dungeon tables reuse IDs (Gnomeregan's last floor is also ID 229,
+-- which Forever resolves as Blackrock Spire).
 local function FloorName(f)
-	local translated = f.name and LOCALIZED_NAMES[f.name]
-	if translated and translated ~= f.name then return translated end
+	if f.name then
+		local translated = LOCALIZED_NAMES[f.name]
+		return translated and translated ~= f.name and translated or f.name
+	end
 	local info = f.mapID and Safe.Call(C_Map.GetMapInfo, f.mapID)
 	if info and info.name and info.name ~= "" then return info.name end
 	local name = f.mapID and Safe.Call(GetRealZoneText, f.mapID)
