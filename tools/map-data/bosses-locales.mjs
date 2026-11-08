@@ -152,6 +152,10 @@ const fallbackTranslations = {
     fr: "Princesse Moira Barbe-de-Bronze", it: "Principessa Moira Barbabronzea", br: "Princesa Moira Barbabronze",
     ru: "Принцесса Мойра Бронзобород", kr: "공주 모이라 브론즈비어드", cn: "铁炉堡公主茉艾拉·铜须", tw: "茉艾拉·銅鬚公主",
   },
+  thevault: {
+    de: "Der Tresorraum", es: "Cámara Negra", mx: "Cámara Negra", fr: "La Chambre forte", it: "The Vault",
+    br: "Cofre Negro", ru: "Подземелье", kr: "검은 금고", cn: "黑色宝库", tw: "地窖",
+  },
 };
 
 const lua = (value) => `{ ${value.map((name) => JSON.stringify(name)).join(", ")} }`;
