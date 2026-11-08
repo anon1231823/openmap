@@ -120,6 +120,33 @@ const fallbackTranslations = {
     de: "Pusillin", es: "Pusillín", mx: "Pusillín", fr: "Pusillin", it: "Pusillin", br: "Pusillin",
     ru: "Пузиллин", kr: "푸실린", cn: "普希林", tw: "普希林",
   },
+  blackguardswordsmith: {
+    de: "Schwertschmied der schwarzen Wache", es: "Armero Guardia Negra", mx: "Armero Guardia Negra",
+    fr: "Fabricant d'épées de la Garde noire", it: "Fabbro della Guardia Nera", br: "Cuteleiro da Guarda Negra",
+    ru: "Оружейник Черной Стражи", kr: "검은호위대 검제작자", cn: "黑衣守卫铸剑师", tw: "黑衣守衛鑄劍師",
+  },
+  crimsonhammersmith: {
+    de: "Purpurroter Hammerschmied", es: "Forjamartillos Carmesí", mx: "Forjador de martillos carmesí",
+    fr: "Forgeur de marteaux cramoisi", it: "Crimson Hammersmith", br: "Forjador de Martelos Carmesim",
+    ru: "Молотобоец из Багрового Легиона", kr: "진홍십자군 대장장이", cn: "红衣铸锤师", tw: "紅衣鑄錘師",
+  },
+  ezragrimm: {
+    de: "Ezra Grimm", es: "Fras Siabi", mx: "Fras Siabi", fr: "Ezra Grimm", it: "Ezra Grimm", br: "Fras Siabi",
+    ru: "Эзра Гримм", kr: "에즈라 그림", cn: "艾兹拉·格里姆", tw: "艾茲拉‧格里姆",
+  },
+  postmastermalown: {
+    de: "Postmeister Malown", es: "Jefe de correos Gassol", mx: "Jefe de correos Gassol", fr: "Postier Malown",
+    it: "Postino Malown", br: "Chefe do Correio Malown", ru: "Почтальон Мэлоун", kr: "우체국장 말로운",
+    cn: "邮差马龙", tw: "郵差瑪羅恩",
+  },
+  skul: {
+    de: "Skul", es: "Skul", mx: "Skul", fr: "Krân", it: "Kranio", br: "Kranio",
+    ru: "Череп", kr: "스컬", cn: "斯库尔", tw: "斯庫爾",
+  },
+  stonespine: {
+    de: "Steinbuckel", es: "Pidrespina", mx: "Pidrespina", fr: "Échine-de-pierre", it: "Spinapietra",
+    br: "Petrespáduas", ru: "Каменный Гребень", kr: "뾰족바위", cn: "石脊", tw: "石脊",
+  },
 };
 
 const lua = (value) => `{ ${value.map((name) => JSON.stringify(name)).join(", ")} }`;
