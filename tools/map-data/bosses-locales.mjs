@@ -3,7 +3,8 @@
 //   node tools/map-data/bosses-locales.mjs OpenMap/Data/Forever/Bosses.lua \
 //     /path/to/DBM-Raids-Vanilla /path/to/DBM-Dungeons/DBM-Party-Vanilla/Shared \
 //     /path/to/DBM-Dungeons/DBM-Party-Vanilla/Classic \
-//     /path/to/DBM-Dungeons/DBM-Party-Forever
+//     /path/to/DBM-Dungeons/DBM-Party-Forever \
+//     /path/to/DBM-Dungeons/DBM-Party-Vanilla/locale.generated.lua
 //
 // The DBM repositories are inputs rather than OpenMap dependencies. English remains in
 // Data/Forever/Places.lua, and names DBM does not translate retain that English fallback.
@@ -18,6 +19,7 @@ const localeNames = {
 const locales = Object.keys(localeNames);
 
 function allFiles(root) {
+  if (statSync(root).isFile()) return [root];
   const files = [];
   for (const name of readdirSync(root)) {
     const path = join(root, name);
@@ -60,9 +62,12 @@ for (const { kind, root } of [
       }
       continue;
     }
-    for (const block of text.matchAll(/if GetLocale\(\) == "([^"]+)" then([\s\S]*?)(?=\nend\nif GetLocale|\nend\s*$)/g)) {
-      const locale = block[1];
-      for (const [id, value] of block[2].matchAll(/\[(\d+)\]\s*=\s*"((?:\\.|[^"\\])*)"/g)) add(id, locale, luaUnescape(value), kind);
+    for (const block of text.split(/(?=if GetLocale\(\) == ")/)) {
+      const locale = block.match(/^if GetLocale\(\) == "([^"]+)" then/)?.[1];
+      if (!locale) continue;
+      for (const [, id, value] of block.matchAll(/\[(\d+)\]\s*=\s*"((?:\\.|[^"\\])*)"/g)) {
+        add(id, locale, luaUnescape(value), kind);
+      }
     }
   }
 }
@@ -96,12 +101,22 @@ const aliases = new Map([
   ["gizrultheslavener", "gizrul"],
   ["overlordramtusk", ["overloadramtusk", "warlordramtusk"]],
   ["warderstilgiss", "wardenstilgiss"],
+  ["illyannaravenoak", "illyannaravensoak"],
   ["mordreshfireeye", "mordressfireeye"],
   ["amnennarthecoldbringer", "amnenarthecoldbringer"],
   ["kirtonos", "kirtonostheherald"],
   ["rasfrostwhisperer", "rasfrostwhisper"],
   ["shadowpriestsezzziz", "nekrumsezzziz"],
 ]);
+
+// Kormok has no DBM encounter localization block, but the client still has translated legacy
+// boss names. Keep this small fallback for names DBM does not publish.
+const fallbackTranslations = {
+  kormok: {
+    de: "Kormok", es: "Kormok", mx: "Kormok", fr: "Kormok", it: "Kormok", br: "Kormok",
+    ru: "Кормок", kr: "코르모크", cn: "库尔莫克", tw: "科爾莫克",
+  },
+};
 
 const lua = (value) => `{ ${value.map((name) => JSON.stringify(name)).join(", ")} }`;
 const lines = [
@@ -122,7 +137,7 @@ for (const locale of locales.filter((locale) => locale !== "enUS")) {
       const alternatives = Array.isArray(aliasesForName) ? aliasesForName : aliasesForName ? [aliasesForName] : [];
       const candidates = sources.map((source) => [normalized, ...alternatives].map((key) => source.get(key)).find(Boolean)).find(Boolean);
       const values = candidates?.[localeNames[locale]];
-      return values?.size ? [...values][0] : name;
+      return values?.size ? [...values][0] : fallbackTranslations[normalized]?.[localeNames[locale]] ?? name;
     });
     if (localized.some((name, i) => name !== names[i])) translated++;
     lines.push(`\t\t[${id}] = ${lua(localized)},`);
