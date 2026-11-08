@@ -161,6 +161,24 @@ const fallbackTranslations = {
     it: "Ribbly Giravite", br: "Ribas Parafuseta", ru: "Риббли Крутипроб", kr: "리블리 스크류스피곳",
     cn: "雷布里·斯库比格特", tw: "雷布里·斯庫比格特",
   },
+  shadowpriestsezzziz: {
+    de: "Schattenpriester Sezz'ziz", es: "Sacerdote oscuro Sezz'ziz", mx: "Sacerdote oscuro Sezz'ziz",
+    fr: "Prêtre des ombres Sezz'ziz", it: "Shadowpriest Sezz'ziz", br: "Sacerdote Sombrio Diz'ieh",
+    ru: "Темный жрец Шезз'зиз", kr: "어둠의사제 세즈지즈", cn: "暗影祭司塞瑟斯", tw: "暗影祭司塞瑟斯",
+  },
+  lordhelnurath: {
+    de: "Lord Hel'nurath", es: "Lord Hel'nurath", mx: "Lord Hel'nurath", fr: "Seigneur Hel'nurath", it: "Lord Hel'nurath",
+    br: "Lorde Hel'nurath", ru: "Лорд Хел'нурат", kr: "군주 헬누라스", cn: "赫尔努拉斯", tw: "赫爾努拉斯",
+  },
+  tsuzee: {
+    de: "Tsu'zee", es: "Tsu'zee", mx: "Tsu'zee", fr: "Tsu'zee", it: "Tsu'zee", br: "Tsu'zee",
+    ru: "Цу'зи", kr: "츄지", cn: "苏斯", tw: "蘇斯",
+  },
+  highlandhorror: {
+    de: "Hochlandschrecken", es: "Horror de las Tierras Altas", mx: "Horror de las Tierras Altas",
+    fr: "Horreur des hautes-terres", it: "Highland Horror", br: "Horror do Planalto",
+    ru: "Ужас нагорья", kr: "고원 공포", cn: "高地恐魔", tw: "高地之懼",
+  },
 };
 
 const lua = (value) => `{ ${value.map((name) => JSON.stringify(name)).join(", ")} }`;
@@ -182,7 +200,8 @@ for (const locale of locales.filter((locale) => locale !== "enUS")) {
       const alternatives = Array.isArray(aliasesForName) ? aliasesForName : aliasesForName ? [aliasesForName] : [];
       const candidates = sources.map((source) => [normalized, ...alternatives].map((key) => source.get(key)).find(Boolean)).find(Boolean);
       const values = candidates?.[localeNames[locale]];
-      return values?.size ? [...values][0] : fallbackTranslations[normalized]?.[localeNames[locale]] ?? name;
+      const translated = values?.size ? [...values][0] : undefined;
+      return translated && translated !== name ? translated : fallbackTranslations[normalized]?.[localeNames[locale]] ?? translated ?? name;
     });
     if (localized.some((name, i) => name !== names[i])) translated++;
     lines.push(`\t\t[${id}] = ${lua(localized)},`);
