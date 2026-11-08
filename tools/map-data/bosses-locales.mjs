@@ -109,12 +109,16 @@ const aliases = new Map([
   ["shadowpriestsezzziz", "nekrumsezzziz"],
 ]);
 
-// Kormok has no DBM encounter localization block, but the client still has translated legacy
-// boss names. Keep this small fallback for names DBM does not publish.
+// Some legacy encounters have no DBM localization block, but the client still has translated
+// names. Keep this small fallback for names DBM does not publish.
 const fallbackTranslations = {
   kormok: {
     de: "Kormok", es: "Kormok", mx: "Kormok", fr: "Kormok", it: "Kormok", br: "Kormok",
     ru: "Кормок", kr: "코르모크", cn: "库尔莫克", tw: "科爾莫克",
+  },
+  pusillin: {
+    de: "Pusillin", es: "Pusillín", mx: "Pusillín", fr: "Pusillin", it: "Pusillin", br: "Pusillin",
+    ru: "Пузиллин", kr: "푸실린", cn: "普希林", tw: "普希林",
   },
 };
 
