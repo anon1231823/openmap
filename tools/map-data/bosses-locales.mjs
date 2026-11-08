@@ -131,7 +131,7 @@ const fallbackTranslations = {
     ru: "Молотобоец из Багрового Легиона", kr: "진홍십자군 대장장이", cn: "红衣铸锤师", tw: "紅衣鑄錘師",
   },
   ezragrimm: {
-    de: "Ezra Grimm", es: "Ezra Grimm", mx: "Ezra Grimm", fr: "Ezra Grimm", it: "Ezra Grimm", br: "Fras Siabi",
+    de: "Ezra Grimm", es: "Ezra Grimm", mx: "Ezra Grimm", fr: "Ezra Grimm", it: "Ezra Grimm", br: "Ezra Grimm",
     ru: "Эзра Гримм", kr: "에즈라 그림", cn: "艾兹拉·格里姆", tw: "艾茲拉‧格里姆",
   },
   postmastermalown: {
@@ -185,7 +185,7 @@ const fallbackTranslations = {
 // data was published. Keep the generated overlay aligned with the client strings.
 const foreverOverrides = {
   crimsonhammersmith: { es: "Forjamartillos Carmesí" },
-  ezragrimm: { es: "Ezra Grimm", mx: "Ezra Grimm" },
+  ezragrimm: { es: "Ezra Grimm", mx: "Ezra Grimm", br: "Ezra Grimm" },
 };
 
 const lua = (value) => `{ ${value.map((name) => JSON.stringify(name)).join(", ")} }`;
