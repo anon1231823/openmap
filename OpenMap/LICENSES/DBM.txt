@@ -4,6 +4,7 @@ for the locale names:
 
   https://github.com/DeadlyBossMods/DBM-Vanilla/tree/master/DBM-Raids-Vanilla
   https://github.com/DeadlyBossMods/DBM-Dungeons/tree/master/DBM-Party-Vanilla
+  https://github.com/DeadlyBossMods/DBM-Dungeons/blob/master/DBM-Party-Forever/locale.generated.lua
 
 The referenced DBM repositories include the following notice:
 

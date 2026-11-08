@@ -12,7 +12,7 @@
   DBM-based boss translations for every supported locale, with English fallback where no translation
   is available. Season of Discovery-only encounters and duplicate combined encounters were removed
   from Gnomeregan and Sunken Temple; Blackfathom Deeps keeps its Vanilla Baron Aquanis and Lorgus
-  Jett entries.
+  Jett entries. Forever's newer dungeon bosses now use DBM-Party-Forever's generated locale data.
 
 ## v0.8.2 (2026-11-08)
 

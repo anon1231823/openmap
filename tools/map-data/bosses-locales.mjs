@@ -2,7 +2,8 @@
 //
 //   node tools/map-data/bosses-locales.mjs OpenMap/Data/Forever/Bosses.lua \
 //     /path/to/DBM-Raids-Vanilla /path/to/DBM-Dungeons/DBM-Party-Vanilla/Shared \
-//     /path/to/DBM-Dungeons/DBM-Party-Vanilla/Classic
+//     /path/to/DBM-Dungeons/DBM-Party-Vanilla/Classic \
+//     /path/to/DBM-Dungeons/DBM-Party-Forever
 //
 // The DBM repositories are inputs rather than OpenMap dependencies. English remains in
 // Data/Forever/Places.lua, and names DBM does not translate retain that English fallback.
