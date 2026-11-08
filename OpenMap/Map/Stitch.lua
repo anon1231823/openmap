@@ -1100,6 +1100,13 @@ function S.InstanceName(inst)
 	if localized and localized ~= inst[2] then return localized end
 	local name = GetRealZoneText and inst[1] > 0 and ns.Safe.Call(GetRealZoneText, inst[1])   -- (0: not in the tables)
 	if not name or name == "" then return inst[2] end
+	-- Some Classic dungeons have several entrances under one map ID.  Their data names
+	-- the wing in English (for example, "Scarlet Monastery - Library"), while the
+	-- localized map data only has the short wing name.  Keep the game's dungeon name and
+	-- translate that suffix for tooltips and entrance pickers.
+	local wing = inst[2]:match(" %- (.+)$")
+	local localizedWing = wing and translated and translated[wing]
+	if localizedWing and localizedWing ~= wing then return name .. " (" .. localizedWing .. ")" end
 	if inst.wing == nil then
 		local en = GetLocale and GetLocale():sub(1, 2) == "en"
 		inst.wing = false
