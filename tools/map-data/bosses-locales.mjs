@@ -94,7 +94,7 @@ const bosses = [...bossSection.matchAll(/\[(\d+)\]\s*=\s*\{([^}]*)\}/gs)].map((m
 const aliases = new Map([
   ["sneed", "sneedsshredder"],
   ["gizrultheslavener", "gizrul"],
-  ["overlordramtusk", "warlordramtusk"],
+  ["overlordramtusk", ["overloadramtusk", "warlordramtusk"]],
   ["mordreshfireeye", "mordressfireeye"],
   ["amnennarthecoldbringer", "amnenarthecoldbringer"],
   ["kirtonos", "kirtonostheherald"],
@@ -117,8 +117,9 @@ for (const locale of locales.filter((locale) => locale !== "enUS")) {
     const sources = sourcesFor(raidMaps.has(String(id)) ? "raid" : "dungeon");
     const localized = names.map((name) => {
       const normalized = normalize(name);
-      const alias = aliases.get(normalized) ?? "";
-      const candidates = sources.map((source) => source.get(normalized) ?? source.get(alias)).find(Boolean);
+      const aliasesForName = aliases.get(normalized);
+      const alternatives = Array.isArray(aliasesForName) ? aliasesForName : aliasesForName ? [aliasesForName] : [];
+      const candidates = sources.map((source) => [normalized, ...alternatives].map((key) => source.get(key)).find(Boolean)).find(Boolean);
       const values = candidates?.[localeNames[locale]];
       return values?.size ? [...values][0] : name;
     });
