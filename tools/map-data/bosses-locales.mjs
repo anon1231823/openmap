@@ -156,6 +156,11 @@ const fallbackTranslations = {
     de: "Der Tresorraum", es: "Cámara Negra", mx: "Cámara Negra", fr: "La Chambre forte", it: "The Vault",
     br: "Cofre Negro", ru: "Подземелье", kr: "검은 금고", cn: "黑色宝库", tw: "地窖",
   },
+  ribblyscrewspigot: {
+    de: "Ribbly Schraubstutz", es: "Ribbly Llavenrosca", mx: "Ribbly Llavenrosca", fr: "Ribbly Fermevanne",
+    it: "Ribbly Giravite", br: "Ribas Parafuseta", ru: "Риббли Крутипроб", kr: "리블리 스크류스피곳",
+    cn: "雷布里·斯库比格特", tw: "雷布里·斯庫比格特",
+  },
 };
 
 const lua = (value) => `{ ${value.map((name) => JSON.stringify(name)).join(", ")} }`;
