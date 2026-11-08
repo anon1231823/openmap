@@ -184,7 +184,7 @@ const fallbackTranslations = {
 // The Forever client updated these Spanish names after the Classic-era DBM locale
 // data was published. Keep the generated overlay aligned with the client strings.
 const foreverOverrides = {
-  crimsonhammersmith: { es: "Forjamartillos Carmesí", mx: "Forjamartillos Carmesí" },
+  crimsonhammersmith: { es: "Forjamartillos Carmesí" },
   ezragrimm: { es: "Ezra Grimm", mx: "Ezra Grimm" },
 };
 
