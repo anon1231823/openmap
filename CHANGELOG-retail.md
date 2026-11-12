@@ -1,5 +1,9 @@
 # OpenMap changelog
 
+## v0.8.7 (2026-11-12)
+
+Nothing new for retail: v0.8.7 fixes Questie's icons on WoW Forever.
+
 ## v0.8.6 (2026-11-12)
 
 ### Improved
