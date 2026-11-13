@@ -8,11 +8,11 @@
   translated names and map artwork from the client's own game files, including Blackrock Spire
   and Dire Maul.
 
-- **Dungeon and raid bosses use the client's language**: Forever now includes the contributor-authored
-  DBM-based boss translations for every supported locale, with English fallback where no translation
-  is available. Season of Discovery-only encounters and duplicate combined encounters were removed
+- **Dungeon and raid bosses use the client's language**: Forever now includes contributor-authored
+  boss translations for every supported locale, with English fallback where no translation is
+  available. Season of Discovery-only encounters and duplicate combined encounters were removed
   from Gnomeregan and Sunken Temple; Blackfathom Deeps keeps its Vanilla Baron Aquanis and Lorgus
-  Jett entries. Forever's newer dungeon bosses now use DBM-Party-Forever's generated locale data.
+  Jett entries.
 ## v0.8.7 (2026-11-12)
 
 ### Fixed
@@ -184,7 +184,6 @@
 - **Friends on other numbered realms show on the map**: Forever's numbered realms of one pool
   (Realm4, Realm12 ...) count as one realm, so a friend there shows like a friend on yours. They
   were left out as if on another realm. By TheRayoX.
-
 ## v0.8.2 (2026-11-08)
 
 ### Improved
