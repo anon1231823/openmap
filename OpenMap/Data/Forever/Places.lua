@@ -5,6 +5,7 @@
 --     { nil, x, y, { ... }, map = uiMapID }: a spot on that zone's map (0..1), where players find it
 --   unplaced[i] = { mapID (0: not in the tables), name, raid, minLevel, maxLevel }: no entrance yet
 --   bosses[mapID] = { name, ... } in the game's order
+--   Missing Forever instance IDs and encounters come from build 1.60.1.70888
 --   transports[i] = { "boat" | "zeppelin" | "airship", route, continent, x, y, toContinent, toX, toY }
 --     (an airship's continent can be 2991, Zephras Isle: not on the stitched map yet); faction =: one faction's only
 --   sailings[i] = { kind, route, { { continent, { x1, y1, x2, y2, ... } }, ... } }: the way it sails,
@@ -15,7 +16,6 @@ local _, ns = ...
 
 ns.MapPlaces = {
 	instances = {
-		{ nil, 0.213, 0.278, { { 0, "The Drowned City", false, 35, 40 } }, map = 1434 },
 		{ 0, -231.0, 1571.6, { { 33, "Shadowfang Keep", false, 18, 23 } } },
 		{ 0, -8762.4, 848.0, { { 34, "Stormwind Stockade", false, 23, 28 } } },
 		{ 0, -11207.8, 1681.2, { { 36, "Deadmines", false, 16, 21 } } },
@@ -39,15 +39,16 @@ ns.MapPlaces = {
 		{ 1, -3908.0, 1130.0, { { 429, "Dire Maul - East", false, 54, 59 }, { 429, "Dire Maul - West", false, 54, 59 }, { 429, "Dire Maul - North", false, 54, 59 } } },
 		{ 1, -8114.5, 1526.4, { { 509, "Ruins of Ahn'Qiraj", true, nil, nil }, { 531, "Ahn'Qiraj Temple", true, nil, nil } } },
 		{ nil, 0.085, 0.593, { { 2959, "City of Dalaran", false, 28, 33 } }, map = 1416 },
+		{ nil, 0.213, 0.278, { { 2970, "The Drowned City", false, 35, 40 } }, map = 1434 },
+		{ nil, 0.386, 0.332, { { 2974, "Blackmaw Hold", false, 55, 60 } }, map = 1447 },
+		{ nil, 0.753, 0.141, { { 2994, "Alcaz Prison", false, 48, 53 } }, map = 1445 },
 		{ nil, 0.478, 0.562, { { 2998, "Excavation Site: Wetlands", false, 24, 29 } }, map = 1437 },
 		{ nil, 0.725, 0.114, { { 2999, "Ruins of Lordaeron", false, 15, 20 } }, map = 1458 },
+		{ nil, 0.481, 0.061, { { 3001, "Shaper's Terrace", false, 58, 60 } }, map = 1449 },
+		{ nil, 0.375, 0.373, { { 3039, "Krol'dok Stronghold", false, 40, 45 } }, map = 2548 },
 		{ nil, 0.277, 0.479, { { 3065, "The Hall of Thanes", false, 13, 18 } }, map = 1455 },
 	},
 	unplaced = {
-		{ 0, "Krol'dok Stronghold", false, 40, 45 },
-		{ 0, "Alcaz Prison", false, 48, 53 },
-		{ 0, "Blackmaw Hold", false, 55, 60 },
-		{ 0, "Shaper's Terrace", false, 58, 60 },
 	},
 	bosses = {
 		[33] = { "Rethilgore", "Razorclaw the Butcher", "Baron Silverlaine", "Commander Springvale", "Odo the Blindwatcher", "Fenrus the Devourer", "Wolf Master Nandos", "Archmage Arugal" },
@@ -76,8 +77,13 @@ ns.MapPlaces = {
 		[509] = { "Kurinnaxx", "General Rajaxx", "Moam", "Buru the Gorger", "Ayamiss the Hunter", "Ossirian the Unscarred" },
 		[531] = { "The Prophet Skeram", "Silithid Royalty", "Battleguard Sartura", "Fankriss the Unyielding", "Viscidus", "Princess Huhuran", "Twin Emperors", "Ouro", "C'thun" },
 		[2959] = { "Arcane Anomaly", "Fel Ancient", "Mana Devourer", "Mana Elemental", "Unstable Sentinel", "Shade of the Archmage", "Lyn the Ignored", "Atrexis the Grave Knight", "Mana Wraith" },
+		[2970] = { "Zul'Alai", "Var'Taka", "Captain Dreadrise", "Deathless Guardians", "Primeval Elemental", "Min'loth the Serpent" },
+		[2974] = { "Withermaw", "Impaan the Imprisoner", "Elder Shaman Bloodmane", "Bonesnout the Unbroken", "Varrox Bleakhoof", "Blackmaw Behemoth", "Unbound Spirit" },
+		[2994] = { "Overseer Wrex", "Tidemistress Ca'zass", "Katerina the Cleaner", "The Questioner", "Blazeroar" },
 		[2998] = { "Saltspine", "Shadetooth", "Highland Horror", "Relic Guardian" },
 		[2999] = { "Witherfang", "The Abandoned", "The Butcher", "Rath'mael", "Lordaeron Captain", "Viktor the Vile", "Bjork" },
+		[3001] = { "Titanosaur", "Ravasaur Hunters", "Thunderhoof", "Venomridge", "Direhorn Matriarch", "Cinder", "King Op", "Snowtalon", "Bolt", "Vitrix", "Nanaya" },
+		[3039] = { "Slavecrusher Grox", "Twilight Commander Zarmok", "Handler Ashka", "Nar'gurk", "Overseer Mugg" },
 		[3065] = { "Faldrim Anvilmar", "Infurnus", "Plunder", "Durgen Dirgehammer" },
 	},
 	transports = {

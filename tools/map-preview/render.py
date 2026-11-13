@@ -35,6 +35,8 @@ HATCH_ALPHA = 0.6
 USE_SEA = os.environ.get("OPENMAP_SEA", "1") == "1"
 USE_GAP = os.environ.get("OPENMAP_GAP", "1") == "1"
 USE_CHART = os.environ.get("OPENMAP_CHART", "0") == "1"   # Options' Responsive ocean & border (Chart.lua; tools/map-chart/layout.py draws it)
+# WorldMap.lua: black viewport shade over the art, under pins (the preview draws only art).
+BRIGHTNESS = max(0.25, min(1.0, float(os.environ.get("OPENMAP_BRIGHTNESS", "1"))))
 USE_BAKED = os.environ.get("OPENMAP_BAKED", "0") == "1"   # the zones from their baked tiles (--bake-zones), as the game draws them
 ZONES_ONLY, FADE_ZOOM = False, None   # (gapfill.py: only the zone layers, at full detail)
 
@@ -766,7 +768,7 @@ def render(cu, cv, zoom, path):
                     out_rect = (l - BORDER_REACH / W_, r + BORDER_REACH / W_, t - BORDER_REACH / H_, b + BORDER_REACH / H_)
                     place({"id": m["id"], "rect": out_rect}, solid, rim, alpha=UNDISCOVERED[3])
             # ("half": a zone you've been to, its pieces' copies under the cities, above)
-    Image.fromarray((np.clip(out, 0, 1) * 255).astype(np.uint8)).save(path)
+    Image.fromarray((np.clip(out * BRIGHTNESS, 0, 1) * 255).astype(np.uint8)).save(path)
     print("wrote", path, flush=True)
 
 #   or name=@Zone Name,zoom (centred on that map; @A+B centres between two maps)

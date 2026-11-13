@@ -30,6 +30,7 @@ local mod = ns:NewModule("worldmap", {
 		playerArrow = true,     -- your own arrow on the world map (off: find your way old-school; the party still shows)
 		iconsFrom = 0,          -- the places' icons from this zoom (ICONS_FROM; 1: the whole world); 0: each from its own (Auto)
 		iconScale = 1,          -- OpenMap's icons at this times their own size (ICON_SCALE)
+		brightness = 1,         -- brightness of the whole stitched map; icons keep their own colour
 		darkening = 1,          -- how dark darkened unexplored areas are (0..1 of the full shade)
 		darkenColor = false,    -- their shade's colour, { r, g, b } (false: the game-like dark one)
 		routes = false,         -- boat and zeppelin routes
@@ -42,12 +43,19 @@ local mod = ns:NewModule("worldmap", {
 		                        --  be set to; a world of smaller zones goes as much further: Data\<client>\Client.lua)
 		chart = false,          -- Santiago Reyes's sea chart round the world (Chart.lua)
 		padMap = false,         -- OpenMap's map with the Gamepad UI on too (Gamepad.lua binds B and full screen; a test)
+		padView = false,        -- with the Gamepad UI on, OpenMap's map over Blizzard's on a frame of its own (PadView.lua; a test)
 	},
 })
 
 -- (dungeons, boats and zeppelins were one switch, `icons`: an old save's choice carried to each)
 function mod.Migrate(db)
 	if db.boats == nil and db.icons ~= nil then db.boats, db.zeppelins = db.icons, db.icons end
+	-- (friends and guild were one switch too, `friends`, and its menu row's id: the friends row keeps
+	-- that id, and a save's single choice carries to the guild's switch too)
+	if db.guild == nil then db.guild = db.friends end
+	-- ("Fade icons while zooming" off from v0.8.6, once for every save: the defaults were written into each
+	-- save, so one never touched has it on all the same; turned on again after this, it stays on)
+	if not db.zoomHidePinsOff then db.zoomHidePins, db.zoomHidePinsOff = false, true end
 end
 
 local ICONS_FROM = { 0, 20, 0.5 }   -- iconsFrom's least (0: Auto), most, step (zoom: times the whole-world view)
@@ -222,6 +230,7 @@ local anim                      -- the running animation, or nil
 -- GetCursorPosition: while it's what's in use. That's from when it shows or moves until the
 -- mouse moves over the map (as Blizzard's own map labels judge it); nil otherwise
 local padX, padY                -- the mouse when the pad's cursor showed or last moved
+local padTilt = 0               -- the zoom stick's tilt as last read (PadStickTilt), -1 to 1
 local function PadFocus()
 	local soft = _G.SoftCursor
 	if not (soft and soft:IsShown() and InputUtil and InputUtil.IsGamepadUIEnabled and InputUtil.IsGamepadUIEnabled()) then
@@ -235,7 +244,7 @@ local function PadCursor()
 	if not PadFocus() then padX = nil return end
 	local soft = _G.SoftCursor
 	local mx, my = GetCursorPosition()
-	if not padX or soft:IsMoving() or (sc.gamepadZoom or 0) ~= 0 then
+	if not padX or soft:IsMoving() or (sc.gamepadZoom or 0) ~= 0 or padTilt ~= 0 then
 		padX, padY = mx, my
 	elseif (mx ~= padX or my ~= padY) and sc:IsMouseOver() then
 		return
@@ -340,9 +349,38 @@ end
 -- the gamepad's zoom stick: a steady rate in log zoom, about its cursor (Blizzard's adds a fixed
 -- scale a second, which at the stitched map's depths is too slow zoomed in, too fast out)
 local PAD_ZOOM_RATE = 1.8       -- per second at full tilt (in log zoom: 6x a second)
-local function PadZoom(elapsed)
-	local speed = sc.gamepadZoomSpeed
-	local tilt = Clamp(sc.gamepadZoom / ((speed and speed > 0) and speed or 1), -1, 1)   -- (Blizzard's curve applied)
+local PAD_DEAD = 0.05           -- the zoom stick's tilt below which it's at rest
+
+-- With the Gamepad UI (Options' padMap) the zoom stick is read from the controller itself. Blizzard
+-- binds it to the map's zoom (GamepadZoom: sc.gamepadZoom) through its binding stack, but on OpenMap's
+-- map those bindings are made again from OpenMap's map changes (the footer's Refresh in OnMapChanged),
+-- so the stick can end up on the quest log's scrolling (SmartNavigation's), which refuses to run then
+-- ("Interface action failed because of an AddOn") and the map never zooms. Reading the stick takes no
+-- binding at all. nil: not to be read (no Gamepad UI, or the game doesn't give it): sc.gamepadZoom then
+local function PadStickTilt()
+	if not (PadUI() and C_GamePad and C_GamePad.GetDeviceMappedState and C_GamePad.StickIndexToConfigName) then
+		return nil
+	end
+	local ok, state = pcall(C_GamePad.GetDeviceMappedState)
+	if not ok or type(state) ~= "table" then return nil end
+	local count, sticks = ns.Safe.Value(state.stickCount), ns.Safe.Value(state.sticks)
+	if type(count) ~= "number" or type(sticks) ~= "table" then return nil end
+	for i = 1, count do
+		if C_GamePad.StickIndexToConfigName(i - 1) == "Camera" then   -- (0 based; Blizzard's right stick)
+			local stick = sticks[i]
+			local y = type(stick) == "table" and ns.Safe.Value(stick.y)
+			if type(y) ~= "number" then return nil end
+			if math.abs(y) < PAD_DEAD then return 0 end
+			local tilt = math.min(math.abs(y), 1) ^ 1.8               -- (Blizzard's curve, GetZoomVelocityFromMagnitude)
+			return y >= 0 and tilt or -tilt
+		end
+	end
+	return nil
+end
+mod.PadStickTilt = PadStickTilt   -- (PadView.lua's zoom too)
+
+-- tilt: the zoom stick, -1 (out) to 1 (in)
+local function PadZoom(elapsed, tilt)
 	local u, v, zoom = View()
 	local sx, sy = CursorOffset()
 	local pu, pv = PerPx(zoom)
@@ -360,7 +398,13 @@ end
 
 -- after Blizzard's own OnUpdate, so its panning never adds to ours
 local function Animate(_, elapsed)
-	if active and (sc.gamepadZoom or 0) ~= 0 then return PadZoom(elapsed) end
+	local tilt = active and mod.db.padMap and PadFocus() and PadStickTilt() or nil
+	if tilt == nil and active and (sc.gamepadZoom or 0) ~= 0 then
+		local speed = sc.gamepadZoomSpeed
+		tilt = Clamp(sc.gamepadZoom / ((speed and speed > 0) and speed or 1), -1, 1)   -- (Blizzard's curve applied)
+	end
+	padTilt = tilt or 0
+	if padTilt ~= 0 then return PadZoom(elapsed, padTilt) end
 	-- the gamepad's cursor at the view's edge pans it (Blizzard's): a move of the user's
 	if active and sc.HasGamepadScrollSpeed and sc:HasGamepadScrollSpeed() then userMoved = true end
 	if not anim then return end
@@ -438,43 +482,60 @@ local function Settled()
 end
 
 -- the player's arrow on top of every other icon (#31): Blizzard's (its group members pin, the party's
--- with it) and ours. Blizzard sets its level again as it reuses the pin, so it's checked each tick
--- and your own blip on it sized away while your arrow is off (Your arrow): the pin draws the party
--- too, so it stays. Blizzard sizes it again on every zoom step (SynchronizePinSizes): hooked, so it
--- goes at once, and each tick as well where there's no such step to hook
+-- with it) and ours. Blizzard sets its level again as it reuses the pin, so it's checked each tick.
+-- Its blips are sized away where OpenMap's switch for them is off: your own while Your arrow is off
+-- (and the yellow ring it pings on opening, #78), the party's and raid's while Party and raid members
+-- is off (#77). Blizzard sizes them again on every zoom step (SynchronizePinSizes): hooked, so they
+-- go at once, and each tick as well where there's no such step to hook
 local BLIP_GONE = 0.01            -- (a size too small to draw: 0 is taken as the texture's own size, a huge arrow)
-local blipHidden = setmetatable({}, { __mode = "k" })
+local BLIP_UNITS = { player = "playerArrow", party = "group", raid = "group" }
+local blipHidden = setmetatable({}, { __mode = "k" })    -- pin -> { unit = true } sized away
 local blipHooked = setmetatable({}, { __mode = "k" })
-local function PlayerBlip(pin, shown)
-	if not pin.SetPinSize then return end
-	if not shown then
-		if not blipHooked[pin] and type(pin.SynchronizePinSizes) == "function" then
-			blipHooked[pin] = true
+local function BlipOff(unit) return mod.db[BLIP_UNITS[unit]] == false end
+local function Locked(pin) return pin:IsProtected() and InCombatLockdown() end
+local function Blips(pin)
+	local ping = type(pin.StartPlayerPing) == "function" and type(pin.StopPlayerPing) == "function"
+	if not blipHooked[pin] then
+		blipHooked[pin] = true
+		if pin.SetPinSize and type(pin.SynchronizePinSizes) == "function" then
 			hooksecurefunc(pin, "SynchronizePinSizes", function(self)
-				if mod.db.playerArrow == false and not (self:IsProtected() and InCombatLockdown()) then
-					pcall(self.SetPinSize, self, "player", BLIP_GONE)
+				if Locked(self) then return end
+				for unit in pairs(BLIP_UNITS) do
+					if BlipOff(unit) then pcall(self.SetPinSize, self, unit, BLIP_GONE) end
 				end
 			end)
 		end
-		pcall(pin.SetPinSize, pin, "player", BLIP_GONE)
-		blipHidden[pin] = true
-	elseif blipHidden[pin] then
-		-- (back at Blizzard's size for this zoom: its size over the canvas's scale, as it sets it)
-		local dp = pin.dataProvider
-		local sizes = dp and dp.GetUnitPinSizesTable and dp:GetUnitPinSizesTable()
-		local scale = map.GetCanvasScale and map:GetCanvasScale() or 1
-		if sizes and sizes.player and scale and scale > 0 then pcall(pin.SetPinSize, pin, "player", sizes.player / scale) end
-		blipHidden[pin] = nil
+		if ping then
+			hooksecurefunc(pin, "StartPlayerPing", function(self)
+				if BlipOff("player") and not Locked(self) then pcall(self.StopPlayerPing, self) end
+			end)
+		end
+	end
+	if ping and BlipOff("player") then pcall(pin.StopPlayerPing, pin) end
+	if not pin.SetPinSize then return end
+	local hidden = blipHidden[pin] or {}
+	blipHidden[pin] = hidden
+	for unit in pairs(BLIP_UNITS) do
+		if BlipOff(unit) then
+			pcall(pin.SetPinSize, pin, unit, BLIP_GONE)
+			hidden[unit] = true
+		elseif hidden[unit] then
+			-- (back at Blizzard's size for this zoom: its size over the canvas's scale, as it sets it)
+			local dp = pin.dataProvider
+			local sizes = dp and dp.GetUnitPinSizesTable and dp:GetUnitPinSizesTable()
+			local scale = map.GetCanvasScale and map:GetCanvasScale() or 1
+			if sizes and sizes[unit] and scale and scale > 0 then pcall(pin.SetPinSize, pin, unit, sizes[unit] / scale) end
+			hidden[unit] = nil
+		end
 	end
 end
 
 local function RaisePlayer()
 	local level = math.min(sc:GetFrameLevel() + PLAYER_ABOVE, 9500)
-	local shown = mod.db.playerArrow ~= false
 	for pin in map:EnumeratePinsByTemplate("GroupMembersPinTemplate") do
-		if not (pin:IsProtected() and InCombatLockdown()) then
+		if not Locked(pin) then
 			if pin:GetFrameLevel() ~= level then pin:SetFrameLevel(level) end
-			PlayerBlip(pin, shown)
+			Blips(pin)
 		end
 	end
 	S.RaiseArrow(level)
@@ -657,9 +718,31 @@ local function BlizzardArt()
 	for pin in map:EnumeratePinsByTemplate("MapExplorationPinTemplate") do pin:SetShown(show) end
 end
 
+-- A viewport-sized shade above all stitched art (including close-up terrain and caves),
+-- below Blizzard's and OpenMap's pins. It stays still while the canvas pans or zooms.
+function mod:UpdateBrightness()
+	if not sc or not S.IsBuilt() then return end
+	local brightness = math.max(0.25, math.min(1, tonumber(self.db.brightness) or self.defaults.brightness))
+	local shade = self.brightnessShade
+	if not shade and brightness == 1 then return end
+	if not shade then
+		shade = CreateFrame("Frame", nil, sc)
+		shade:SetAllPoints(sc)
+		shade:EnableMouse(false)
+		shade.texture = shade:CreateTexture(nil, "OVERLAY")
+		shade.texture:SetAllPoints(shade)
+		shade.texture:SetColorTexture(0, 0, 0, 1)
+		self.brightnessShade = shade
+	end
+	shade:SetFrameLevel(S.artTop)
+	shade.texture:SetAlpha(1 - brightness)
+	shade:SetShown(active and self.enabled and brightness < 1)
+end
+
 local function Attach(mapID)
 	active = mod.enabled and Stitchable(mapID) and S.IsBuilt() and S.Layout(mapID) or false
 	S.SetShown(active)
+	mod:UpdateBrightness()
 	BlizzardArt()
 	if active then
 		sc:SetMouseWheelZoomMode(MAP_CANVAS_MOUSE_WHEEL_ZOOM_BEHAVIOR_NONE)
@@ -897,6 +980,24 @@ local function PathTo()
 	return ok and started and true or false
 end
 
+-- a left press that wandered off and came back isn't a click: Blizzard's test only compares where it
+-- went down with where it came up (about 4 pixels), so a drag back and forth over the map, or a slow
+-- one that ends near its start, zoomed into the zone or city under the cursor (#37, #64)
+local press = { moved = false }
+local PRESS_SLOP_SQ = 20          -- (Blizzard's own click distance, squared: MAX_DIST_FOR_CLICK_SQ)
+local function PressDown(_, button)
+	if button ~= "LeftButton" then return end
+	press.x, press.y = sc:GetCursorPosition()
+	press.moved = false
+end
+local function PressTrack()
+	if press.moved or not press.x or not sc.mouseButtonInfo.LeftButton.down then return end
+	local x, y = sc:GetCursorPosition()
+	local dx, dy = x - press.x, y - press.y
+	if dx * dx + dy * dy > PRESS_SLOP_SQ then press.moved = true end
+end
+local function WasDrag() return press.moved end
+
 local function OnCanvasClick(from, button)
 	if not active then return false end
 	if Dropping(button) then
@@ -906,6 +1007,10 @@ local function OnCanvasClick(from, button)
 	-- (Shift-click is other addons' first, Shortest Path Forever's journeys: handled by none of them,
 	-- it comes back here through NavigateToCursor, `from` nil, and zooms in as a click)
 	if from and button == "LeftButton" and IsShiftKeyDown() then return PathTo() end
+	-- (Ctrl-click with "Ctrl-click drops a pin" off is other addons', Map Pin Enhanced's, and Blizzard's
+	-- own waypoint: passed on, not a zoom that ends the click here (#19))
+	if from and button == "LeftButton" and IsControlKeyDown() and mod.db.ctrlClickPin == false then return false end
+	if from and button == "LeftButton" and WasDrag() then return true end
 	local u, v = mod.CursorWorld()
 	local _, _, zoom = View()
 	local chain = S.ChainAt(u, v)
@@ -943,12 +1048,13 @@ end
 
 local function OnPinMouseDown(_, button)
 	sc:OnMouseDown(button)
+	PressDown(nil, button)
 	OnGrab()
 end
 
 local function OnPinMouseUp(pin, button)
 	local x, y = sc:GetCursorPosition()
-	if button ~= "LeftButton" or not sc:WouldCursorPositionBeClick(button, x, y) then
+	if button ~= "LeftButton" or not sc:WouldCursorPositionBeClick(button, x, y) or WasDrag() then
 		sc:OnMouseUp(button)
 		return
 	end
@@ -1017,11 +1123,13 @@ local function Setup()
 	sc.CalculateScrollExtentsAtScale = Extents(sc.CalculateScrollExtentsAtScale)
 	sc:HookScript("OnMouseWheel", OnMouseWheel)
 	sc:HookScript("OnMouseDown", OnGrab)
+	sc:HookScript("OnMouseDown", PressDown)
 	-- Listen directly: Blizzard's canvas click dispatcher only tracks left/right buttons.
 	sc:HookScript("OnMouseUp", function(_, button)
 		if active and button == "MiddleButton" then mod:FindMe(true) end
 	end)
 	sc:HookScript("OnUpdate", Animate)
+	sc:HookScript("OnUpdate", PressTrack)
 	-- the gamepad (Forever's gamepad mode): its zoom stick is ours on the stitched map (PadZoom);
 	-- its A (Blizzard's icons under the cursor, then this) presses OpenMap's control or icon under
 	-- the cursor (Gamepad.lua), or else zooms in as a click does; its X, with no icon under the
@@ -1270,6 +1378,8 @@ local function StyleChanged()
 			end)
 			return
 		end
+		-- (the controller view built: the art is on its frame, not Blizzard's map: a reload gives it back)
+		if mod.PadViewBuilt and mod.PadViewBuilt() then return end
 		mod.padWaits = nil
 		mod.enabled = true
 		Start()
@@ -1277,23 +1387,45 @@ local function StyleChanged()
 	end
 end
 
--- Options' padMap turned on or off: on, while OpenMap waits for the Gamepad UI to go, its map at once;
--- off with the Gamepad UI on and the map OpenMap's, only a reload gives it back
+-- Options' padMap turned on or off: on, while OpenMap waits for the Gamepad UI to go, its map at once
+-- (in combat, once it's over: set up out of combat, as at login); off with the Gamepad UI on and the
+-- map OpenMap's, only a reload gives it back
+local padMapOwner = {}
 function mod.SetPadMap(on)
 	if on and mod.padWaits and not InCombatLockdown() then
 		mod.padWaits = nil
 		mod.enabled = true
 		Start()
+	elseif on and mod.padWaits then
+		ns.RegisterEvent(padMapOwner, "PLAYER_REGEN_ENABLED", function()
+			ns.UnregisterEvent(padMapOwner, "PLAYER_REGEN_ENABLED")
+			if mod.db.padMap then mod.SetPadMap(true) end   -- (not turned off again meanwhile)
+		end)
 	elseif not on and started and PadUI() then
 		ns:Print(ns.L["The Gamepad UI is on: /reload so OpenMap leaves the world map to Blizzard (until then the game may block closing the map with the controller)."])
 	end
 	if mod.PadKeys then mod.PadKeys() end
 end
 
+-- Options' padView turned on or off: on, while OpenMap waits for the Gamepad UI to go, its map over
+-- Blizzard's at once (PadView.lua); off once it's up, a reload (it's set up on Blizzard's map)
+function mod.SetPadView(on)
+	if on and mod.padWaits and mod.StartPadView then
+		mod.StartPadView()
+	elseif not on and mod.PadViewBuilt and mod.PadViewBuilt() then
+		ns:Print(ns.L["Takes effect after a /reload."])
+	end
+end
+
 function mod:OnEnable()
 	ns.RegisterEvent(styleOwner, "INPUT_DEVICE_INTERFACE_TRANSITION", StyleChanged)
 	if PadUI() and not self.db.padMap then
 		self.enabled, self.padWaits = false, true
+		-- (padView: OpenMap's map on a frame of its own over Blizzard's, which it leaves alone)
+		if self.db.padView and mod.StartPadView then
+			mod.StartPadView()
+			return
+		end
 		if not self.db.padNoted then
 			self.db.padNoted = true
 			ns:Print(mod.PadOffText())
@@ -1320,12 +1452,14 @@ end
 
 function mod:Refresh()
 	ApplyChart()
+	self:UpdateBrightness()
 	for key, opt in pairs(SET_OPTION) do
 		local set = S.GetPinSet(key)
 		if set then S.SetPinSetOn(set, self.db[opt]) end
 	end
 	if S.RefreshRoutes then S.RefreshRoutes() end
 	S.SetPlayerHidden(self.db.playerArrow == false)
+	if active and map:IsShown() then RaisePlayer() end
 	S.SetPlacesFrom(self.db.iconsFrom)
 	S.SetFoundOnly(self.db.foundOnly)
 	if self.RefreshFlightsFound then self.RefreshFlightsFound() end
@@ -1406,6 +1540,16 @@ function mod:Diag()
 		ns:Print("Questie: %d map icons, %d on this map (%d placed by Questie, %d of those moved to Forever's positions, %d placed by OpenMap), map %d.",
 			registered, shown, placed, moved, ours, map:GetMapID() or 0)
 	end
+	local kinds = mod.QuestieKinds and mod.QuestieKinds()
+	if kinds then ns:Print("Questie's icons by kind (all / on this map): %s.", kinds) end
+	local lost = mod.QuestieLost and mod.QuestieLost()
+	if lost then
+		ns:Print("Questie's pins: %d; pin hidden %d, no icon %d, icon off its pin %d, icon hidden %d, see-through %d, under the art %d.",
+			lost.pins, lost.pinHidden, lost.noIcon, lost.offPin, lost.hidden, lost.faint, lost.under)
+		local k = math.max(lost.pins - lost.noIcon, 1)
+		ns:Print("Questie's icons: %d visible; on screen %.1f px across on average (scale %.2f, pins' own %.2f); top level %d, art's top %d.",
+			lost.visible, lost.size / k, lost.scale / k, lost.pinScale / k, lost.level, S.artTop or 0)
+	end
 	local cv = S.closeView or {}
 	ns:Print("Up close: zoom %.1f, softening %.0f%%, minimap %.0f%% (%d tiles, %d in the gaps); %d view updates, the last %.1fs ago; %.2f ms each (worst %.1f).",
 		cv.zoom or 0, (cv.soft or 0) * 100, (cv.mix or 0) * 100, cv.tiles or 0, cv.gapTiles or 0,
@@ -1448,7 +1592,13 @@ function mod:Options()
 		padMap = { type = "toggle", name = ns.L["OpenMap's map with the controller (test)"], order = 12, width = "full", get = get,
 			set = function(info, v) set(info, v) mod.SetPadMap(v) end, hidden = true,
 			desc = ns.L["With the game's Gamepad UI on, OpenMap's map instead of Blizzard's. The controller's B and full-screen buttons on the map are OpenMap's then, so the game doesn't block them. Still being tried out: if the game blocks something, turn this off and /reload."] },
+		padView = { type = "toggle", name = ns.L["OpenMap's map with the Gamepad UI (test)"], order = 12.5, width = "full", get = get,
+			set = function(info, v) set(info, v) mod.SetPadView(v) end,
+			desc = ns.L["With the game's Gamepad UI on, OpenMap draws its map over Blizzard's and leaves Blizzard's map as it is, so the controller's buttons keep working. Off: Blizzard's map while the Gamepad UI is on. Still being tried out: if something doesn't work, turn this off and /reload."] },
 		lookHeader = ns.Header(ns.L["Look"], 20),
+		brightness = { type = "range", name = ns.L["Map brightness"], order = 20.5, min = 0.25, max = 1, step = 0.05, isPercent = true,
+			get = get, set = set, disabled = off,
+			desc = ns.L["Brightness of the entire OpenMap map, including explored areas and the sea. Player and quest icons stay bright. 100% restores the original brightness."] },
 		colorMatch = { type = "range", name = ns.L["Colour matching"], order = 21, min = 0, max = 1, step = 0.05, isPercent = true,
 			get = get, set = set, disabled = off,
 			desc = ns.L["How far each zone's borders move toward a shared palette, so mountains and borders hand over smoothly between zones. Zone interiors keep their own colours."] },

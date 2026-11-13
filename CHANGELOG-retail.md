@@ -1,5 +1,103 @@
 # OpenMap changelog
 
+## v0.8.7 (2026-11-12)
+
+Nothing new for retail: v0.8.7 fixes Questie's icons on WoW Forever.
+
+## v0.8.6 (2026-11-12)
+
+### Improved
+
+- **Icons stay shown while zooming**: "Fade icons while zooming" is now off for everyone, as zooming is
+  smooth enough with them shown; turn it on again in the menu's On the map tab if you prefer it.
+
+## v0.8.5 (2026-11-12)
+
+### New
+
+- **OpenMap's map with a controller** (the game's Gamepad UI; a test, off until you turn it on in
+  Options: "OpenMap's map with the Gamepad UI (test)"): the seamless map with the Gamepad UI on, where
+  OpenMap leaves the world map to Blizzard. OpenMap draws its map over Blizzard's, so the
+  controller's buttons keep working and B closes the map. The left stick moves the cursor (at the
+  edge it pans), the right stick zooms about it, A zooms in or presses what's under the cursor, X
+  zooms out or closes what's open, and pressing the left stick puts the waypoint there. Off (the
+  default): Blizzard's map with the Gamepad UI, as before. If you play with a controller, try it and
+  tell us how it goes (#57). By FlyingPenguin98.
+
+- **Reopen the map on your zone** (the menu's More tab, Reopen map: "Center on your zone"): the map
+  opens on the whole zone you're in, in the middle, wherever you stand in it (#143).
+
+### Fixed
+
+- **"Darken unexplored areas" keeps its soft edges up close**: once the minimap's detail shows, the
+  shade was hard-edged rectangles; it now has each unexplored area's own shape, as further out
+  (#101, #129).
+
+## v0.8.4 (2026-11-11)
+
+### Improved
+
+- **Your party and raid get a gold-bordered dot** on the stitched map, everywhere, so they can't be
+  mistaken for a guild member's dot. Someone the game won't place is shown faintly in the middle of
+  their zone, with "Somewhere in" on the tooltip. By KonigTX.
+
+### Fixed
+
+- **"Your arrow" off also hides the yellow location ping** when the world map opens or changes
+  zones. Turning it on again restores the normal arrow and ping; party markers stay visible (#78). By Luquatic.
+
+- **"Party and raid members" off means off**: Blizzard's own blips for your group are hidden too,
+  not only OpenMap's dots (#77, found by Luquatic).
+
+- **Dragging the map no longer zooms into a zone or city**: a drag that came back near where it
+  started counted as a click and zoomed into what was under the cursor, Ironforge from parts of Dun
+  Morogh most of all (#37, #64).
+
+- **Guild markers clear when a guildmate joins your group**: their shared-location dot or zone
+  badge entry could stay when the guild roster and the party spelled the character's name
+  differently. By puschie286.
+
+## v0.8.3 (2026-11-09)
+
+### New
+
+- **Turn off OpenMap's dungeon maps** (Options and the menu's On the map tab): off, clicking an
+  entrance shows its card over the world map, and opening the map inside a dungeon shows the world
+  map, so another dungeon map addon (NeedRoll, Dungeon Journal ...) can show its own. By ZiiMs.
+
+- **Friends and guild each have their own switch**: keep your friends on the map and hide a big
+  guild, or the other way round. A save with the old single switch off turns both off. By ZiiMs.
+
+- **Map brightness** in the Look tab: dim the whole stitched map, including explored areas and the
+  sea, while player and quest icons stay bright. 100% keeps the original look (the default). By
+  forcedroidbrain.
+
+- **A launcher for Titan Panel** and other LibDataBroker displays: it works like the minimap
+  button (click: the map with its menu; right-click: the options window). By Naladdar.
+
+### Improved
+
+- **The settings menu can be resized**: drag its bottom-right corner to make it wider or shorter,
+  double-click the corner to reset it. Long labels (German, the nearby zones settings) wrap
+  instead of running into the next column, and the settings scroll when they don't fit the screen,
+  instead of the whole menu shrinking. By Naladdar.
+
+- **The map window can be resized with Move Any**: Move Any still places and scales the window,
+  and OpenMap's corner grips set its width and height. By Naladdar.
+
+- **Clicking a quest's icon on the windowed map shows it in the quest log**: the quest log beside
+  the map opens if it was closed, with the quest's details, as well as tracking the quest and
+  zooming in on it. (On the full-screen map a click still tracks and zooms only.)
+
+- **A dungeon map remembers its tab**: picking Quests beside the quest log keeps it picked the next
+  time a dungeon's map opens.
+
+### Fixed
+
+- **No more dot in the bottom-left corner of the screen** after closing the map, or inside a
+  dungeon: the map art OpenMap keeps loaded while the map is closed was drawn there, hundreds of
+  faint copies on one pixel. Found by ryanull24.
+
 ## v0.8.2 (2026-11-08)
 
 ### Improved

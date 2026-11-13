@@ -296,6 +296,30 @@ Fed the view (centre, half extents, zoom) on every pan and zoom (`S.SetView`):
   handlers carry OpenMap's taint: B then closes the map through a call only Blizzard's code may
   make (`SetGamePadCursorControl`, the panel manager's), and the game blocks it. Swapped to the
   Gamepad UI later, OpenMap asks for a `/reload`; swapped away from it, OpenMap sets up then.
+  (A taint log of that: the bindings the Gamepad UI made from OpenMap's map changes read OpenMap's
+  writes to the scroll container, its zoom and scroll, and closing the map then had the game block
+  `SetPreferredGamepadInteractTarget`; the taint stays in the binding stack until a reload.)
+- `PadView.lua`: the controller view, OpenMap's map with the Gamepad UI on (Options' padView, on by
+  default) without that taint. `WorldMap.lua` doesn't set up (it waits, as above), and this draws the
+  stitched map (`S.Build` on a frame of its own, `S.Layout(947)`: one host, the world) over Blizzard's
+  map, whose canvas is only made see-through: nothing of Blizzard's map is written or replaced, its
+  gamepad functions only hooked (`hooksecurefunc`), so the cursor, B, the D-pad and the focus stay
+  Blizzard's and secure. The view's own `u, v, zoom` place the canvas (its scale, its offset) and feed
+  `S.SetZoom` and `S.SetView` as `WorldMap.lua` does; it answers what the other files ask of the map
+  (`mod.Glide`, `ViewNow`, `CursorWorld` ...) and sets up the parts that need no map of their own
+  (flights, pins, the waypoint, the quill, the report, the menu). The controller is read, not bound:
+  the right stick from `C_GamePad` (`mod.PadStickTilt`), Blizzard's cursor where it is, A and X after
+  Blizzard's own (on its map underneath, unseen). OpenMap's controls under the cursor are entered and
+  pressed through `Gamepad.lua` (`PadControlAt`, `PadPress`, `PadWheelAt`: the right stick as their
+  wheel). While it's on (`mod.PadViewOn`), nothing changes Blizzard's map or quest log from OpenMap's
+  code (a dungeon opens in OpenMap's own view of it, `Dungeons.lua`; the menu's quest log button points
+  to the D-pad; the report has no note popup) and nothing goes on Escape's list (`UISpecialFrames`,
+  which the Gamepad UI's closing of windows reads). Every addon's copy of HereBeDragons is kept off
+  Blizzard's map (its provider's `HandlePin`, wrapped) and its icons put on the view; Questie's tooltip
+  is given the icons round the hovered one there (`MapIconTooltip.ShowOnTooltip`'s own list), as it
+  finds none on Blizzard's map. The view and Blizzard's scroll frame both clip their children, so the
+  cursor is drawn on Blizzard's map frame itself, over both. `/openmap padview` says how it's getting
+  on.
 
 ## Ideas and open questions
 

@@ -13,22 +13,22 @@ ns.MapDungeonDrawn = {
 	[2959] = { -- City of Dalaran
 		{ tiles = { P .. "2959_1", P .. "2959_2", P .. "2959_3", P .. "2959_4", P .. "2959_5", P .. "2959_6", P .. "2959_7", P .. "2959_8", P .. "2959_9", P .. "2959_10", P .. "2959_11", P .. "2959_12" }, credit = "Santiago Reyes" },
 	},
+	[2970] = { -- The Drowned City
+		{ tiles = { P .. "the-drowned-city_1", P .. "the-drowned-city_2", P .. "the-drowned-city_3", P .. "the-drowned-city_4", P .. "the-drowned-city_5", P .. "the-drowned-city_6", P .. "the-drowned-city_7", P .. "the-drowned-city_8", P .. "the-drowned-city_9", P .. "the-drowned-city_10", P .. "the-drowned-city_11", P .. "the-drowned-city_12" }, credit = "Santiago Reyes" },
+	},
 	[2998] = { -- Excavation Site: Wetlands
 		{ tiles = { P .. "2998_1", P .. "2998_2", P .. "2998_3", P .. "2998_4", P .. "2998_5", P .. "2998_6", P .. "2998_7", P .. "2998_8", P .. "2998_9", P .. "2998_10", P .. "2998_11", P .. "2998_12" }, credit = "Santiago Reyes" },
 	},
 	[2999] = { -- Ruins of Lordaeron
 		{ tiles = { P .. "2999_1", P .. "2999_2", P .. "2999_3", P .. "2999_4", P .. "2999_5", P .. "2999_6", P .. "2999_7", P .. "2999_8", P .. "2999_9", P .. "2999_10", P .. "2999_11", P .. "2999_12" }, credit = "Santiago Reyes" },
 	},
-	[3065] = { -- The Hall of Thanes
-		{ tiles = { P .. "3065_1", P .. "3065_2", P .. "3065_3", P .. "3065_4", P .. "3065_5", P .. "3065_6", P .. "3065_7", P .. "3065_8", P .. "3065_9", P .. "3065_10", P .. "3065_11", P .. "3065_12" }, credit = "Santiago Reyes" },
-	},
-	["Krol'dok Stronghold"] = { -- Krol'dok Stronghold
-		{ tiles = { P .. "kroldok-stronghold_1", P .. "kroldok-stronghold_2", P .. "kroldok-stronghold_3", P .. "kroldok-stronghold_4", P .. "kroldok-stronghold_5", P .. "kroldok-stronghold_6", P .. "kroldok-stronghold_7", P .. "kroldok-stronghold_8", P .. "kroldok-stronghold_9", P .. "kroldok-stronghold_10", P .. "kroldok-stronghold_11", P .. "kroldok-stronghold_12" }, credit = "Santiago Reyes" },
-	},
-	["Shaper's Terrace"] = { -- Shaper's Terrace
+	[3001] = { -- Shaper's Terrace
 		{ tiles = { P .. "shapers-terrace_1", P .. "shapers-terrace_2", P .. "shapers-terrace_3", P .. "shapers-terrace_4", P .. "shapers-terrace_5", P .. "shapers-terrace_6", P .. "shapers-terrace_7", P .. "shapers-terrace_8", P .. "shapers-terrace_9", P .. "shapers-terrace_10", P .. "shapers-terrace_11", P .. "shapers-terrace_12" }, credit = "Santiago Reyes" },
 	},
-	["The Drowned City"] = { -- The Drowned City
-		{ tiles = { P .. "the-drowned-city_1", P .. "the-drowned-city_2", P .. "the-drowned-city_3", P .. "the-drowned-city_4", P .. "the-drowned-city_5", P .. "the-drowned-city_6", P .. "the-drowned-city_7", P .. "the-drowned-city_8", P .. "the-drowned-city_9", P .. "the-drowned-city_10", P .. "the-drowned-city_11", P .. "the-drowned-city_12" }, credit = "Santiago Reyes" },
+	[3039] = { -- Krol'dok Stronghold
+		{ tiles = { P .. "kroldok-stronghold_1", P .. "kroldok-stronghold_2", P .. "kroldok-stronghold_3", P .. "kroldok-stronghold_4", P .. "kroldok-stronghold_5", P .. "kroldok-stronghold_6", P .. "kroldok-stronghold_7", P .. "kroldok-stronghold_8", P .. "kroldok-stronghold_9", P .. "kroldok-stronghold_10", P .. "kroldok-stronghold_11", P .. "kroldok-stronghold_12" }, credit = "Santiago Reyes" },
+	},
+	[3065] = { -- The Hall of Thanes
+		{ tiles = { P .. "3065_1", P .. "3065_2", P .. "3065_3", P .. "3065_4", P .. "3065_5", P .. "3065_6", P .. "3065_7", P .. "3065_8", P .. "3065_9", P .. "3065_10", P .. "3065_11", P .. "3065_12" }, credit = "Santiago Reyes" },
 	},
 }

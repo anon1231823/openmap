@@ -206,6 +206,25 @@ class CaveTests(unittest.TestCase):
         contMap = 1415
     """
 
+    def test_mended_pictures_are_ours_and_there(self):
+        """a picture mended where the game's own has a fault baked in (tools/map-caves/minimap.py's MEND:
+        215101's white block, #114) is OpenMap's copy, under Media, and the file is there"""
+        files = self.lua.eval("""(function()
+            local out = {}
+            for _, c in ipairs(ns.MapCaveMinimap) do
+                local p = c[6]
+                for j = 1, #p, 7 do if type(p[j]) == "string" then out[#out + 1] = p[j] end end
+            end
+            return out
+        end)()""")
+        files = list(files.values())
+        self.assertGreater(len(files), 0, "a mended picture (MEND) in the data")
+        prefix = "Interface\AddOns\OpenMap\Media\Textures\Forever\\"
+        for f in files:
+            self.assertTrue(f.startswith(prefix), f)
+            path = ROOT / "Media" / "Textures" / "Forever" / (f[len(prefix):].replace("\\", "/") + ".tga")
+            self.assertTrue(path.exists(), "%s: %s isn't there" % (f, path))
+
     def test_ironforge_is_no_cave(self):
         # no cave map nor cave from the minimap at Ironforge's wards: nothing surfaces there, nothing
         # dims the city's own map round it

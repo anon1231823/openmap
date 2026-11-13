@@ -54,6 +54,16 @@ local MAX_POINTS = 600          -- in one stroke
 local MARK = "Interface\\TargetingFrame\\UI-RaidTargetingIcon_"
 
 local map, sc, set, liveSet, catcher, tray   -- (liveSet: the stroke being drawn, redrawn alone as it grows)
+-- PadView.lua's controller view on (Blizzard's map left as it is, OpenMap's drawn over it)
+local function PadView() return mod.PadViewOn and mod.PadViewOn() or false end
+-- where the drawing hand is (screen px): the mouse, or with the controller view the pad's cursor
+local function Hand()
+	if PadView() and mod.PadCursorXY then
+		local x, y = mod.PadCursorXY()
+		if x then return x, y end
+	end
+	return GetCursorPosition()
+end
 local drawing = false
 local forPin                    -- the map pin what's drawn is attached to (Pins.lua's Draw)
 local stroke                    -- the stroke being drawn: { record, x, y (where it began, px) }
@@ -227,13 +237,13 @@ local function Start()
 		Redraw()
 		return
 	end
-	local x, y = GetCursorPosition()
+	local x, y = Hand()
 	stroke = { record = st, x = x, y = y, lx = x, ly = y, pu = pu }
 end
 
 local function Move()
 	if not stroke then return end
-	local x, y = GetCursorPosition()
+	local x, y = Hand()
 	if math.abs(x - stroke.lx) + math.abs(y - stroke.ly) < STEP then return end
 	local u, v = mod.CursorWorld()
 	if not u then return end
@@ -563,7 +573,7 @@ local function CreateCatcher()
 	catcher:SetScript("OnMouseDown", function(_, button)
 		if button == "LeftButton" then
 			Start()
-		elseif button == "RightButton" then
+		elseif button == "RightButton" and not PadView() then   -- (Blizzard's pan: not from here with the controller view)
 			panning = true
 			sc:OnMouseDown("LeftButton")   -- Blizzard's own drag-to-pan
 		end
@@ -620,7 +630,7 @@ function mod:ToggleSketch(on, pin, dock, sess)
 		C_Timer.After(0, function() if map:IsShown() then mod:ToggleSketch(true, pin, dock, sess) end end)
 		return
 	end
-	if on and (not set or not mod.IsStitched()) then
+	if on and (not set or not (mod.IsStitched() or PadView())) then
 		ns:Print(L["The quill draws on the world, continent and zone maps."])
 		return
 	end
@@ -667,6 +677,20 @@ function mod:SketchOptions(opts, get, set_, off)
 end
 
 function mod.RefreshSketch() Redraw() end
+
+-- for PadView.lua: A while the quill's out: the pen down where the pad's cursor is (a mark or the eraser
+-- at once), or lifted, the stroke done (the controller has no drag: A, move, A)
+function mod.PadSketchPress()
+	if not drawing then return false end
+	if stroke then
+		Finish()
+		RefreshTray()
+	else
+		Start()
+	end
+	return true
+end
+function mod.PadSketchDrawing() return drawing and stroke ~= nil or false end
 
 -- a report's drawing kept on the map after its quill goes down, while its note is written and its code
 -- copied (Report.lua); nil: gone

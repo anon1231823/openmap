@@ -2500,10 +2500,11 @@ end
 --------------------------------------------------------------------------------
 -- Unexplored land up close, hidden or darkened. The minimap's detail (Close.lua) is drawn over the
 -- zones' art, and showed the land the hidden pieces leave blank, or as it is where they're darkened.
--- Over it, while it shows, where a zone's unexplored pieces are and no explored piece is (Blizzard's
--- pieces are rectangles: their rectangles' difference, cut along every piece's edges into strips):
--- hidden, the zone's blank art again; darkened, the shade a zone not found at all has (UNDISCOVERED),
--- over the art and the minimap alike, the pieces' darkened copies under the minimap put away
+-- Over it, while it shows: hidden, where a zone's unexplored pieces are and no explored piece is (their
+-- rectangles' difference, cut along every piece's edges into strips), the zone's blank art again;
+-- darkened, the shade a zone not found at all has (UNDISCOVERED), over the art and the minimap alike,
+-- in each unexplored piece's own shape (its art's alpha, soft-edged as the pieces' darkened copies
+-- are: in rectangles it was hard-edged up close, #101, #129), the copies under the minimap put away
 -- meanwhile (the two darken alike: Shade.DIM is matched to the shade). Unexplored land looks the same
 -- from every zoom, the minimap's detail following it.
 --------------------------------------------------------------------------------
@@ -2564,6 +2565,31 @@ function Shade.Hide.Rects(mapID)
 	return out, count
 end
 
+-- the unexplored pieces' tiles, where they're drawn (world units, as Shade.Pieces places their copies):
+-- { file, x, y, w, h (the art the tile shows), fw, fh (its whole file, the next power of two at an edge) }
+function Shade.Hide.Tiles(mapID, p)
+	local out = {}
+	local tw, th = p.layer.tileWidth, p.layer.tileHeight
+	ForEachPiece(mapID, function(files, x, y, w, h, _, piece)
+		if not piece.unexplored then return end
+		local cols, rows = math.ceil(w / tw), math.ceil(h / th)
+		for j = 1, rows do
+			local ph = (j < rows) and th or (h - (rows - 1) * th)
+			for k = 1, cols do
+				local file = files[(j - 1) * cols + k]
+				file = tonumber(file) or file
+				local pw = (k < cols) and tw or (w - (cols - 1) * tw)
+				if file and pw > 0 and ph > 0 then
+					local fw, fh = (k < cols) and tw or Pow2(pw), (j < rows) and th or Pow2(ph)
+					out[#out + 1] = { file = file, x = p.left + (x + (k - 1) * tw) * p.sx, y = p.top + (y + (j - 1) * th) * p.sy,
+						w = pw * p.sx, h = ph * p.sy, fw = fw * p.sx, fh = fh * p.sy }
+				end
+			end
+		end
+	end)
+	return out
+end
+
 -- a zone's blank art over its hidden rectangles, drawn as its base art is (PlaceBase: on its territory,
 -- its colour-matched copy through its border band too)
 function Shade.Hide.Build(mapID, rects, un, grade)
@@ -2573,12 +2599,17 @@ function Shade.Hide.Build(mapID, rects, un, grade)
 	local f = CreateFrame("Frame", nil, Shade.Hide.root)
 	f:SetAllPoints(root)
 	if Shade.Hide.mode == "dim" then
-		-- (the shade on the zone's land alone, as a zone not found at all is shaded: the sea it paints left be)
+		-- (the shade on the zone's land alone, as a zone not found at all is shaded: the sea it paints left
+		-- be; through each unexplored piece's art, its alpha the shade's shape: Shade.Hide.Tiles)
 		local land = ZoneMask(f, p, ZONELAND)
-		for _, r in ipairs(rects) do
+		for _, t in ipairs(Shade.Hide.Tiles(mapID, p)) do
 			local tex = f:CreateTexture(nil, "ARTWORK")
 			Shade.Tint(tex)
-			Record(tex, p.left + r[1] * p.sx, p.top + r[2] * p.sy, (r[3] - r[1]) * p.sx, (r[4] - r[2]) * p.sy)
+			Record(tex, t.x, t.y, t.w, t.h)
+			local shape = f:CreateMaskTexture()
+			shape:SetTexture(t.file, "CLAMPTOBLACKADDITIVE", "CLAMPTOBLACKADDITIVE")
+			Record(shape, t.x, t.y, t.fw, t.fh)      -- (the whole file: a mask isn't cut, it's placed)
+			tex:AddMaskTexture(shape)
 			if land then tex:AddMaskTexture(land) end
 		end
 		return { frame = f, un = un, grade = grade }
@@ -2638,7 +2669,8 @@ function Shade.Hide.Show(mapID)
 			z = nil
 		end
 		if not z then
-			z = rects and #rects > 0 and Shade.Hide.Build(mapID, rects, un, grade) or { un = un, grade = grade }
+			z = (mode == "dim" and un > 0 or rects and #rects > 0) and Shade.Hide.Build(mapID, rects, un, grade)
+				or { un = un, grade = grade }
 			Shade.Hide.zones[mapID] = z
 		end
 		if z.frame then z.frame:Show() end
@@ -3166,6 +3198,12 @@ end
 -- you've explored the zone's land where it is (or a little round it: a dock stands in the water), as
 -- Blizzard's own map reveals it; one in no zone always (a player's request)
 function places.Found(u, v)
+	-- in a city (Ragefire Chasm, in Orgrimmar's Cleft of Shadow): found with the city, whose own map has
+	-- no pieces to explore (#113)
+	for _, c in ipairs(cities) do
+		local l, r, t, b = S.Rect(c.mapID)
+		if l and u >= l and u <= r and v >= t and v <= b then return not (c.piece and c.piece.unexplored) end
+	end
 	local chain = S.ChainAt(u, v)
 	local zone = chain[#chain]
 	if #chain < 3 then return true end

@@ -329,6 +329,15 @@ function mod:BuildFlights()
 end
 
 function mod:ClearFlightRoute() ClearRoute() end
+
+-- /openmap forgetflights: the flight masters remembered as learned, forgotten for this character (one
+-- wrongly counted stays learned otherwise, and route planners use the list: #153); the next flight
+-- master's map learns the real ones again. (What the game itself reports as found isn't stored: kept)
+function mod:ForgetFlights()
+	if mod.char then mod.char.flightsKnown = {} end
+	if set then RefreshLook() end
+	ns:Print(ns.L["Learned flight paths forgotten for this character: talk to a flight master to learn the ones you have again."])
+end
 function mod.RefreshFlightsFound() if set then RefreshLook() end end
 
 function mod:SetupFlights()

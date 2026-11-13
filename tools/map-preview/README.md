@@ -69,3 +69,6 @@ Two read what players and contributors send from the game:
 | `report.py <db2> <tex> <out.png> "OM1\|..."` | a "Report a problem" code: the view and what was drawn (a dungeon map's: its floors) |
 | `notes.py <db2> <tex> <out dir> <notes.txt> [#id ...]` | the Map notes tool's export: each note at its place, its painted area and text, and an index (`notes.md`) |
 
+
+`OPENMAP_BRIGHTNESS=0.6` previews the Look tab’s Map brightness at 60% (25–100%,
+100% by default). It dims the rendered art; the in-game shade sits below map pins.

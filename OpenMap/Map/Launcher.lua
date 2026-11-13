@@ -30,12 +30,16 @@ local function Click(mouse)
 end
 
 local function Tip(owner)
-	GameTooltip:SetOwner(owner, "ANCHOR_LEFT")
-	GameTooltip:AddLine("|cff" .. ns.ACCENT .. "Open|rMap")
-	GameTooltip:AddLine(L["Click: the map and its menu"], 1, 1, 1)
-	GameTooltip:AddLine(L["Right-click: the options window"], 1, 1, 1)
-	if owner == button then GameTooltip:AddLine(L["Drag: move it round the minimap"], 0.6, 0.6, 0.6) end
-	GameTooltip:Show()
+	-- Titan/LDB hands us its own tooltip, already positioned and shown by the display.
+	-- For the minimap button and addon compartment, we still own GameTooltip.
+	local brokerTooltip = owner and owner.AddLine
+	local tooltip = brokerTooltip and owner or GameTooltip
+	if not brokerTooltip then tooltip:SetOwner(owner, "ANCHOR_LEFT") end
+	tooltip:AddLine("|cff" .. ns.ACCENT .. "Open|rMap")
+	tooltip:AddLine(L["Click: the map and its menu"], 1, 1, 1)
+	tooltip:AddLine(L["Right-click: the options window"], 1, 1, 1)
+	if owner == button then tooltip:AddLine(L["Drag: move it round the minimap"], 0.6, 0.6, 0.6) end
+	if not brokerTooltip then tooltip:Show() end
 end
 
 -- the addon compartment (the toc's AddonCompartmentFunc*): globals, as the game looks them up by name
@@ -97,6 +101,22 @@ function mod.RefreshLauncher()
 	end
 end
 
+-- Titan Panel and other LibDataBroker displays can use this launcher without
+-- OpenMap depending on either addon. Libraries from other addons are ready at
+-- PLAYER_LOGIN; if no broker is installed, the minimap launcher still works.
+local function RegisterBroker()
+	local ldb = LibStub and LibStub("LibDataBroker-1.1", true)
+	if not ldb then return end
+	ldb:NewDataObject("OpenMap", {
+		type = "launcher",
+		label = "OpenMap",
+		icon = ICON,
+		tocname = ns.name,
+		OnClick = function(_, mouse) Click(mouse) end,
+		OnTooltipShow = Tip,
+	})
+end
+
 function mod:LauncherOptions(opts, get, off)
 	local function set(info, v) mod.db[info[#info]] = v mod.RefreshLauncher() end
 	opts.minimapButton = { type = "toggle", name = L["Minimap button"], order = 28.5, get = get, set = set, disabled = off,
@@ -111,5 +131,8 @@ local boot = CreateFrame("Frame")
 boot:RegisterEvent("PLAYER_LOGIN")
 boot:SetScript("OnEvent", function(self)
 	self:UnregisterEvent("PLAYER_LOGIN")
-	if mod.db and mod.db.enabled then mod.RefreshLauncher() end
+	if mod.db and mod.db.enabled then
+		mod.RefreshLauncher()
+		RegisterBroker()
+	end
 end)

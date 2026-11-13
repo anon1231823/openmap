@@ -36,6 +36,8 @@ shrunk from `art/icon/openmap.png` by `tools/icon/build.py`.
 | `MapZones/` | every zone map composited onto the world as the map draws it at full detail (each zone's base art and overlays through its masks, the colour-match copies, the interiors, the gaps' finer maps), in 512-px tiles, BLP with DXT5 compression | `tools/map-preview/render.py --bake-zones` |
 | `MapArt/` | world and continent map tiles with their sea and continent names painted out (by hand) | `tools/map-art/import.py` |
 | `MapTile/` | the game's own cave and dungeon map tiles, copied as they are (`<file ID>.blp`): WoW Forever doesn't list them for every language, so some clients (esMX, ruRU, itIT) drew them green. RADD95's OpenMap TextureFix (MIT) found this and fixed it first | `tools/map-tiles/build.py` |
+| `MapCaveMend/` | the game's own cave minimap pictures where a fault is baked into the file, mended (`215101.tga`: md_mushroomcave08's, an opaque white block over its tunnel's mouth made clear), drawn instead of the game's | `tools/map-caves/minimap.py` (`MEND`) |
+| `MapDungeonMinimap/` | maps of WoW Forever's own dungeons laid out from the game's own minimap pictures of their rooms (WMOMinimapTexture) and, outdoors, of their terrain, where each room is, a picture per floor (floors set in `tools/map-dungeons/minimap.json`): Ruins of Lordaeron (`2999_*`), The Hall of Thanes (`3065_*`); in the dungeon map layout, 4 x 3 tiles of 256 px | `tools/map-dungeons/minimap.py` |
 
 **Drawn for WoW Forever's own dungeons** (the game has no map of them), used with the artist's
 permission, credited on the map in game, and not covered by OpenMap's MIT licence:

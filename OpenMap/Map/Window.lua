@@ -4,8 +4,8 @@
 -- remembered, and a size slider scales the whole window. Only the windowed map: the maximized map is left to
 -- Blizzard. Blizzard's panel layout tables are left alone (writing to them can
 -- taint): the saved place is put back each time Blizzard lays the map out.
--- With Move Any, the window is Move Any's: no title bar, grips or saved place here (they
--- fought its own drag and resize, #23).
+-- With Move Any, its position and scale remain authoritative. OpenMap supplies
+-- only the viewport resize grips and saved width/height, without a competing mover.
 --------------------------------------------------------------------------------
 
 local _, ns = ...
@@ -28,19 +28,17 @@ local FillScreen, SetupQuestLog, TurnArrows
 local blizzardSize              -- the windowed map's own size, for a reset
 local ours = false              -- OpenMap is moving / sizing the window itself (not to be undone)
 local sizing = false            -- a grip is being dragged: the drag sizes the window, nothing puts it back
-local moveAny = false           -- Move Any moves and sizes the window: OpenMap leaves it be
+local moveAny = false           -- Move Any owns position and scale, OpenMap owns viewport dimensions
 
--- Move Any loaded, or on to load for this character (it may load after OpenMap sets the window up)
+-- At PLAYER_LOGIN, enabled addons have finished loading. An installed but disabled
+-- Move Any must not affect OpenMap's layout (GetAddOnEnableState can misreport it).
 local function MoveAnyOn()
 	local loaded = C_AddOns and C_AddOns.IsAddOnLoaded or IsAddOnLoaded
-	if loaded and loaded("MoveAny") then return true end
-	local state = C_AddOns and C_AddOns.GetAddOnEnableState
-	if not state then return false end
-	-- (no character: this one. UnitName gives WoW Forever's first and last name, and the first alone
-	-- named no character, which reads as enabled: Move Any counted as on whenever installed, a player's report)
-	local ok, on = pcall(state, "MoveAny")
-	return ok and type(on) == "number" and on > 0
+	if not loaded then return false end
+	local ok, on = pcall(loaded, "MoveAny")
+	return ok and on and true or false
 end
+mod.MoveAnyOn = MoveAnyOn
 
 local function Refit()
 	local sc = map.ScrollContainer
@@ -54,18 +52,20 @@ local function Maximized()
 end
 
 local function Apply()
-	if not map or Maximized() or ours or moveAny or sizing then return end
+	if not map or Maximized() or ours or sizing then return end
 	ours = true
-	local w = mod.db.window
-	if w then
-		local point, rel, relPoint, x, y = map:GetPoint(1)
-		if map:GetNumPoints() ~= 1 or point ~= w[1] or rel ~= UIParent or relPoint ~= w[2]
-			or math.abs((x or 0) - w[3]) > 0.5 or math.abs((y or 0) - w[4]) > 0.5 then
-			map:ClearAllPoints()
-			map:SetPoint(w[1], UIParent, w[2], w[3], w[4])
+	if not moveAny then
+		local w = mod.db.window
+		if w then
+			local point, rel, relPoint, x, y = map:GetPoint(1)
+			if map:GetNumPoints() ~= 1 or point ~= w[1] or rel ~= UIParent or relPoint ~= w[2]
+				or math.abs((x or 0) - w[3]) > 0.5 or math.abs((y or 0) - w[4]) > 0.5 then
+				map:ClearAllPoints()
+				map:SetPoint(w[1], UIParent, w[2], w[3], w[4])
+			end
 		end
+		if math.abs((map:GetScale() or 1) - mod.db.windowScale) > 0.001 then map:SetScale(mod.db.windowScale) end
 	end
-	if math.abs((map:GetScale() or 1) - mod.db.windowScale) > 0.001 then map:SetScale(mod.db.windowScale) end
 	local size = mod.db.windowSize
 	if size and not InCombatLockdown() and (math.abs(map:GetWidth() - size[1]) > 0.5 or math.abs(map:GetHeight() - size[2]) > 0.5) then
 		map:SetSize(size[1], size[2])
@@ -163,7 +163,7 @@ local function Grip(corner)
 			return
 		end
 		mod.db.windowSize = { math.floor(map:GetWidth() + 0.5), math.floor(map:GetHeight() + 0.5) }
-		Save()
+		if not moveAny then Save() end
 		if map:IsShown() then Refit() end   -- (laid out at the scale the drag showed: WorldMap.lua)
 		if mod.EndResize then mod.EndResize() end
 	end
@@ -180,9 +180,12 @@ local function Grip(corner)
 		local w = math.max(MIN_W, start.w + (left and -dx or dx))
 		local h = math.max(MIN_H, start.h - (y - start.y) / s)
 		ours = true
-		map:ClearAllPoints()
-		-- (offsets in the map's own units, as GetLeft gives)
-		map:SetPoint("TOPLEFT", UIParent, "BOTTOMLEFT", left and start.right - w or start.left, start.top)
+		if not moveAny then
+			map:ClearAllPoints()
+			-- (offsets in the map's own units, as GetLeft gives)
+			map:SetPoint("TOPLEFT", UIParent, "BOTTOMLEFT", left and start.right - w or start.left, start.top)
+		end
+		-- Move Any owns the frame anchor; change dimensions only to avoid a mover fight.
 		map:SetSize(w, h)
 		ours = false
 		if mod.FollowResize then mod.FollowResize() end
@@ -213,7 +216,7 @@ function mod:SetupWindow(worldMap)
 		end
 	end
 	grip = {}
-	-- (with Move Any: none of this. Its own drag and resize place the window, and nothing puts it back)
+	-- With Move Any, leave position, scale and title bar to it; resizing is set up below.
 	if not moveAny then
 		map:SetClampedToScreen(true)
 		-- partly off the screen: sideways and down while some of it stays on, never up (its title bar is
@@ -254,8 +257,6 @@ function mod:SetupWindow(worldMap)
 		end)
 		handle:SetScript("OnLeave", GameTooltip_Hide)
 
-		grip = { Grip("BOTTOMRIGHT"), Grip("BOTTOMLEFT") }
-
 		-- put the saved place back whenever Blizzard lays the map out: opening shows the map first and
 		-- places it after (inside ShowUIPanel), so it's put back once that's done, not a moment later
 		map:HookScript("OnShow", Apply)
@@ -282,7 +283,21 @@ function mod:SetupWindow(worldMap)
 			map:SetUserPlaced(false)
 			Save()
 		end)
+	else
+		-- Preserve only OpenMap's saved width/height. Move Any still controls
+		-- the window's position and scale, including any subsequent adjustments.
+		map:HookScript("OnShow", Apply)
+		if ShowUIPanel then hooksecurefunc("ShowUIPanel", function(frame) if frame == map then Apply() end end) end
+		if UpdateUIPanelPositions then hooksecurefunc("UpdateUIPanelPositions", function() if map:IsShown() then Apply() end end) end
+		local function RestoreSize()
+			if not ours and not sizing and map:IsShown() then Apply() end
+		end
+		for _, method in ipairs({ "SetSize", "SetWidth", "SetHeight" }) do
+			if map[method] then hooksecurefunc(map, method, RestoreSize) end
+		end
 	end
+	-- Both clients use the same corner grips; only their resize anchoring differs.
+	grip = { Grip("BOTTOMRIGHT"), Grip("BOTTOMLEFT") }
 	local function Mode()
 		local max = Maximized()
 		mod.ChatOverMap()
@@ -328,6 +343,33 @@ function mod:SetupWindow(worldMap)
 	for _, g in ipairs(grip) do g:SetFrameLevel(OverIcons() + 1) end
 	FitRightGrip()
 	SetupQuestLog()
+	if moveAny then
+		-- Keep the resize grip in the bottom-right corner: put the quest toggle at
+		-- the bottom of the right-hand tab rail, above the coordinate labels.
+		local function PlaceQuestToggle()
+			local toggle = map.SidePanelToggle
+			local canvas = map.GetCanvasContainer and map:GetCanvasContainer()
+			if not toggle or not canvas or InCombatLockdown() then return end
+			local windowed = not Maximized()
+			local x, y = -2, windowed and 46 or 1
+			local p, rel, rp, ox, oy = toggle:GetPoint(1)
+			if toggle:GetNumPoints() == 1 and p == "BOTTOMRIGHT" and rel == canvas
+				and rp == "BOTTOMRIGHT" and ox == x and oy == y then return end
+			toggle:ClearAllPoints()
+			toggle:SetPoint("BOTTOMRIGHT", canvas, "BOTTOMRIGHT", x, y)
+			if mod.PlaceCoords then mod.PlaceCoords() end
+		end
+		map:HookScript("OnShow", PlaceQuestToggle)
+		if map.RefreshOverlayFrames then hooksecurefunc(map, "RefreshOverlayFrames", PlaceQuestToggle) end
+		if map.SetDisplayState then hooksecurefunc(map, "SetDisplayState", PlaceQuestToggle) end
+		if map.Maximize then hooksecurefunc(map, "Maximize", PlaceQuestToggle) end
+		if map.Minimize then hooksecurefunc(map, "Minimize", PlaceQuestToggle) end
+		if map.QuestLog then
+			map.QuestLog:HookScript("OnShow", PlaceQuestToggle)
+			map.QuestLog:HookScript("OnHide", PlaceQuestToggle)
+		end
+		PlaceQuestToggle()
+	end
 	-- Blizzard's buttons on the map over its icons and the dungeon view (the quest log's button among
 	-- them); and that button's arrows turned (Blizzard's point the other way): the log comes in from
 	-- the right, so in is ◀ and away is ▶

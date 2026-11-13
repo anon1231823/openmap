@@ -27,7 +27,7 @@ local function Options()
 		set = function(_, v) mod.db.enabled = v; ns:Print(ns.L["Takes effect after a /reload."]) end }
 	args.padWaits = { type = "description", order = 0.5, fontSize = "medium",
 		name = function() return "|cffff8040" .. mod.PadOffText() .. "|r" end,
-		hidden = function() return not mod.padWaits end }
+		hidden = function() return not mod.padWaits or (mod.PadViewOn and mod.PadViewOn()) or false end }
 	return { type = "group", name = "|cff" .. ns.ACCENT .. "OpenMap|r " .. ns.version, args = args }
 end
 
@@ -50,10 +50,20 @@ local function Slash(msg)
 	if takes[word] then msg, rest = word, raw:match("^%S+%s+(.+)$") end
 	local run = {
 		status = "Diag", paint = "TogglePaint", notes = "TogglePaint", debug = "ToggleDebugOverlay",
-		bench = "Bench", pins = "TogglePins", news = "ToggleNews", entrance = "Entrance", draw = "ToggleSketch", dungeons = "DungeonDiag",
+		bench = "Bench", pins = "TogglePins", news = "ToggleNews", entrance = "Entrance", draw = "ToggleSketch", dungeons = "DungeonDiag", bosses = "ToggleBossPlacer", forgetflights = "ForgetFlights",
 		welcome = "ShowWelcome", highlights = "Highlights", warm = "ToggleWarm",
 		reset = "ResetWindow",   -- (reset: the windowed map's size and place, for one off the screen)
 	}
+	-- (the controller view's diagnostics: it runs while OpenMap's usual map is off, PadView.lua)
+	if msg == "padview" and mod.PadViewDiag then return mod.PadViewDiag() end
+	-- the controller view's map (PadView.lua): what works on it, its status its own
+	if run[msg] and mod.padWaits and mod.PadViewOn and mod.PadViewOn() then
+		local onView = { pins = true, draw = true, news = true }
+		if msg == "status" and mod.PadViewDiag then mod.PadViewDiag()
+		elseif onView[msg] and mod[run[msg]] then mod[run[msg]](mod)
+		else ns:Print(ns.L["That isn't available with the Gamepad UI yet."]) end
+		return
+	end
 	if run[msg] then
 		if mod.enabled and mod[run[msg]] then mod[run[msg]](mod, takes[msg] and rest or nil)
 		elseif mod.padWaits then ns:Print(mod.PadOffText())

@@ -154,6 +154,9 @@ local function ChatLink(p)
 	local open = _G.ChatFrame_OpenChat                 -- (no chat box open: one opened with it)
 	if not (insert and insert(text)) and open then open(text) end
 end
+-- PadView.lua's controller view on (Blizzard's map left as it is, OpenMap's drawn over it)
+local function PadView() return mod.PadViewOn and mod.PadViewOn() or false end
+
 local function Chatting() return IsModifiedClick and IsModifiedClick("CHATLINK") end
 
 local function PinClick(self)
@@ -350,7 +353,7 @@ local function CodeBox(text)
 		codeFrame:EnableMouse(true)
 		local top, title = Look:Window(codeFrame, "")   -- (the map window's own frame, its title bar and X)
 		codeFrame:SetSize(560, 150 + top)
-		tinsert(UISpecialFrames, "OpenMapPinsCode")
+		if not PadView() then tinsert(UISpecialFrames, "OpenMapPinsCode") end   -- (the Gamepad UI reads that list)
 		codeFrame.title = title
 		local scroll = CreateFrame("ScrollFrame", nil, codeFrame, "UIPanelScrollFrameTemplate")
 		scroll:SetPoint("TOPLEFT", 16, -10 - top)
@@ -761,8 +764,8 @@ function mod:TogglePins(on)
 	if on then
 		if not map:IsShown() then ToggleWorldMap() end
 		RefreshList()
-		local at = mod.db.pinsAt                   -- (where it was dragged to)
-		if at then
+		local at = mod.db.pinsAt                   -- (where it was dragged to; with the controller view, in the map's view)
+		if at and not PadView() then
 			list:ClearAllPoints()
 			list:SetPoint(at[1], UIParent, at[2], at[3], at[4])
 		end

@@ -16,10 +16,10 @@ cache = sys.argv[1]
 BUILD = sys.argv[2] if len(sys.argv) > 2 else clients.BUILD
 os.makedirs(cache, exist_ok=True)
 
-def table(name):
-    p = os.path.join(cache, "%s-%s.csv" % (name, BUILD))
+def table(name, build=BUILD):
+    p = os.path.join(cache, "%s-%s.csv" % (name, build))
     if not os.path.exists(p) or os.path.getsize(p) < 100:
-        req = urllib.request.Request("https://wago.tools/db2/%s/csv?build=%s" % (name, BUILD), headers={"User-Agent": "openmap-data/1"})
+        req = urllib.request.Request("https://wago.tools/db2/%s/csv?build=%s" % (name, build), headers={"User-Agent": "openmap-data/1"})
         open(p, "wb").write(urllib.request.urlopen(req, timeout=60).read())
         time.sleep(0.2)
     return list(csv.DictReader(open(p, encoding="utf-8")))
@@ -82,6 +82,14 @@ for r in table("LFGDungeons"):
 FOREVER = [("The Hall of Thanes", 13, 18), ("Ruins of Lordaeron", 15, 20), ("Excavation Site: Wetlands", 24, 29),
            ("City of Dalaran", 28, 33), ("The Drowned City", 35, 40), ("Krol'dok Stronghold", 40, 45),
            ("Alcaz Prison", 48, 53), ("Blackmaw Hold", 55, 60), ("Shaper's Terrace", 58, 60)]
+
+# The newer build supplies the IDs and encounters missing from the pinned map data.
+FOREVER_INSTANCE_BUILD = "1.60.1.70888"
+
+def forever_map_name(row):
+    name = row["MapName_lang"]
+    return "Shaper's Terrace" if name == "The Shaper's Terrace" else name
+
 # entrances the tables don't have (a wing's own portal, a second way in, Forever's dungeons'):
 # name (as above, a wing's or a dungeon's) -> [where, ...], each either (continent, x, y) in world
 # yards, recorded in game standing in the portal (/openmap entrance <name> prints the line), or
@@ -95,6 +103,17 @@ ENTRANCES = {
     "Excavation Site: Wetlands": [("map", 1437, 47.8, 56.2)],   # Wetlands
     "The Hall of Thanes": [("map", 1455, 27.7, 47.9)],          # Ironforge
     "Ruins of Lordaeron": [("map", 1458, 72.5, 11.4)],          # Undercity
+    # Launch dungeon approaches, checked against the entrance guides below.
+    # Krol'dok: the cave west of the gates, near the guide's 37.5, 37.2.
+    # https://conquestcapped.com/guides/wow-forever/wow-forever-kroldok-stronghold-guide/
+    "Krol'dok Stronghold": [("map", 2548, 37.5, 37.3)],           # Riverglades
+    # https://conquestcapped.com/guides/wow-forever/wow-forever-alcaz-prison-guide/
+    "Alcaz Prison": [("map", 1445, 75.3, 14.1)],                # Dustwallow Marsh
+    # The tunnel mouth is the approach to Blackmaw Hold.
+    # https://hackverso.com/en/wowforever/masmorras-raides/
+    "Blackmaw Hold": [("map", 1447, 38.6, 33.2)],               # Azshara
+    # https://consolepcgaming.com/wow-forever-shapers-terrace-entrance-guide/
+    "Shaper's Terrace": [("map", 1449, 48.1, 6.1)],             # Un'Goro Crater
 }
 
 def levels(name, raid):
@@ -110,7 +129,7 @@ WORLD = uimap.read_world(_world)
 YARDS = WORLD["yards"] if WORLD else {}
 def on_world(c, x, y): return uimap.on_world(WORLD, c, x, y)
 
-maps = {r["MapName_lang"]: r for r in table("Map") if r["InstanceType"] in ("1", "2")}
+map_rows = table("Map")
 inst, unplaced = [], []
 def entry(mapID, name, raid, lo, hi):
     return {"id": mapID, "name": name, "raid": raid, "min": lo, "max": hi}
@@ -119,12 +138,19 @@ def place(e, at):
         if where[0] == "map": inst.append(dict(e, cont="map", map=where[1], x=where[2] / 100, y=where[3] / 100))
         else: inst.append(dict(e, cont=where[0], x=where[1], y=where[2]))
     return e["name"] in ENTRANCES or at is not None
+forever_ids = set()
 if FOREVER_CLIENT:
-    for r in table("Map"):
+    forever_names = {name for name, _, _ in FOREVER}
+    maps = {forever_map_name(r): r for r in map_rows if r["InstanceType"] in ("1", "2")}
+    missing = forever_names - maps.keys()
+    if missing:
+        maps.update({forever_map_name(r): r for r in table("Map", FOREVER_INSTANCE_BUILD)
+                     if r["InstanceType"] == "1" and forever_map_name(r) in missing})
+    for r in map_rows:
         kind = r["InstanceType"]
         if kind not in ("1", "2") or r["CorpseMapID"] not in ("0", "1"): continue
         x, y = float(r["Corpse_0"]), float(r["Corpse_1"])
-        name = r["MapName_lang"]
+        name = forever_map_name(r)
         if (x == 0 and y == 0) or name.startswith("<") or "Test" in name: continue
         raid = kind == "2"
         for wing in WINGS.get(name, [name]):
@@ -134,10 +160,11 @@ if FOREVER_CLIENT:
         r = maps.get(name)
         e = entry(int(r["ID"]) if r else 0, name, False, lo, hi)
         if not place(e, None): unplaced.append(e)
+    forever_ids = {e["id"] for e in inst + unplaced if e["id"] > 0 and e["name"] in forever_names}
 else:
     # the encounter journal's entrances (JournalInstanceEntrance: what the game's own map shows), each
     # instance's level range from the group finder's tuning for it at its first difficulty (normal)
-    by_id = {r["ID"]: r for r in table("Map")}
+    by_id = {r["ID"]: r for r in map_rows}
     ct = {r["ID"]: r for r in table("ContentTuning")}
     finder = {}
     for r in sorted(table("LFGDungeons"), key=lambda r: int(r["DifficultyID"] or 0)):
@@ -158,12 +185,20 @@ else:
             place(e, (c, x, y))
 
 # each instance's bosses, in the game's order (DungeonEncounter)
-bosses = {}
-for r in sorted(table("DungeonEncounter"), key=lambda r: (int(r["MapID"]), int(r["OrderIndex"]))):
-    m = int(r["MapID"])
-    if m > 0 and r["Name_lang"] not in bosses.setdefault(m, []): bosses[m].append(r["Name_lang"])
+def boss_lists(rows):
+    lists = {}
+    for r in sorted(rows, key=lambda r: (int(r["MapID"]), int(r["OrderIndex"]))):
+        m = int(r["MapID"])
+        if m > 0 and r["Name_lang"] not in lists.setdefault(m, []): lists[m].append(r["Name_lang"])
+    return lists
+
 wanted = {e["id"] for e in inst + unplaced}
-bosses = {m: b for m, b in bosses.items() if m in wanted}
+bosses = {m: b for m, b in boss_lists(table("DungeonEncounter")).items() if m in wanted}
+
+missing_bosses = forever_ids - bosses.keys()
+if missing_bosses:
+    bosses.update({m: b for m, b in boss_lists(table("DungeonEncounter", FOREVER_INSTANCE_BUILD)).items()
+                   if m in missing_bosses})
 groups = []           # entrances within 250 yards (a spot on a zone's map: 1% of it) share a pin (Blackrock Mountain ...)
 def near(g, i):
     if g["cont"] != i["cont"] or g.get("map") != i.get("map"): return False
@@ -306,6 +341,8 @@ with open(os.path.join(DATA, "Places.lua"), "w", encoding="utf-8", newline="\n")
     f.write("--     { nil, x, y, { ... }, map = uiMapID }: a spot on that zone's map (0..1), where players find it\n")
     f.write("--   unplaced[i] = { mapID (0: not in the tables), name, raid, minLevel, maxLevel }: no entrance yet\n")
     f.write("--   bosses[mapID] = { name, ... } in the game's order\n")
+    if forever_ids:
+        f.write("--   Missing Forever instance IDs and encounters come from build %s\n" % FOREVER_INSTANCE_BUILD)
     f.write("--   transports[i] = { \"boat\" | \"zeppelin\" | \"airship\", route, continent, x, y, toContinent, toX, toY }\n")
     f.write("--     (an airship's continent can be 2991, Zephras Isle: not on the stitched map yet); faction =: one faction's only\n")
     f.write("--   sailings[i] = { kind, route, { { continent, { x1, y1, x2, y2, ... } }, ... } }: the way it sails,\n")

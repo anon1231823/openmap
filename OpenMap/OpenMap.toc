@@ -53,6 +53,8 @@ Data\Forever\Places.lua
 Data\Forever\Bosses.lua
 Data\Forever\DungeonMaps.lua
 Data\Forever\DungeonDrawn.lua
+Data\Forever\DungeonMinimap.lua
+Data\Forever\DungeonBosses.lua
 Data\Forever\Grade.lua
 Data\Forever\Levels.lua
 Data\Forever\Fishing.lua
@@ -89,6 +91,7 @@ Map\Sketch.lua
 Map\Debug.lua
 Map\Bench.lua
 Map\Gamepad.lua
+Map\PadView.lua
 Map\Report.lua
 Map\Nav.lua
 Map\Combat.lua

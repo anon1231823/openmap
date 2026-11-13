@@ -254,6 +254,8 @@ function M:SetWidth(w) self.__w = w end
 function M:SetHeight(h) self.__h = h end
 function M:GetWidth() return self.__w end
 function M:GetHeight() return self.__h end
+function M:GetVerticalScroll() return self.__vscroll or 0 end   -- (a scroll frame's: the menu's list, Panel.lua)
+function M:SetVerticalScroll(v) self.__vscroll = v end
 function M:GetSize() return self.__w, self.__h end
 function M:GetRect() return 0, 0, self.__w, self.__h end
 function M:GetLeft() return 0 end

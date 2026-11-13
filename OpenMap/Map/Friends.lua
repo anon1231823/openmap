@@ -1,8 +1,10 @@
 --------------------------------------------------------------------------------
--- Friends and guild on the map. Everyone online on your friends list (Battle.net friends playing
+-- Friends and guild on the map, each with its own switch (Options: Friends on the map,
+-- Guild members on the map). Everyone online on your friends list (Battle.net friends playing
 -- this game too) and in your guild shows by zone, as the game's own lists give it: a badge on the
 -- zone, with who's there. Those who use OpenMap and share where they are show as a class-coloured
--- dot where they stand instead. Your party and raid are left to Nav.lua's dots and Blizzard's.
+-- dot where they stand instead. Your party and raid are left to Nav.lua's bordered dots, which ask
+-- mod.FriendPlace for what's known here of those the game won't place.
 -- Sharing (asked once as the map opens; the menu's and Options' Share where you are; off unless turned on): your place as an addon message
 -- (prefix OpenMapLoc) every few seconds while you move, each minute while you stand still, to your
 -- guild and to your friends who use OpenMap; never from inside a dungeon, raid or battleground.
@@ -22,7 +24,8 @@ local function Timed(name, fn, ...)
 	return fn(...)
 end
 
-mod.defaults.friends = true         -- friends and guild on the map
+mod.defaults.friends = true         -- friends on the map
+mod.defaults.guild = true           -- guild members on the map
 mod.defaults.friendsShare = false   -- your place sent to your guild and your friends who use OpenMap
 
 local PREFIX = "OpenMapLoc"         -- (its own: the game holds back a burst per prefix, Pins.lua's apart)
@@ -41,10 +44,11 @@ local BADGE = { atlas = "socialqueuing-icon-group", texture = "Interface\\Friend
 local me = {}                       -- (this file's events' owner: Pins.lua has the module's CHAT_MSG_ADDON)
 local map
 local dotSet, zoneSet
-local roster = {}                   -- full name -> { name, class, level, area, guild, friend }: online now
+local roster = {}                   -- full name -> { name, class, level, area, guild, friend, guid }: online now
+local guildGuids = {}                -- Forever character name -> guild GUID, or false if ambiguous
 local friends = {}                  -- full name -> { whisper = name } or { bn = gameAccountID }: online now
 local known = {}                    -- full name -> true: friends who use OpenMap
-local live = {}                     -- full name -> { map, x, y, class, level, guild, at }: those sharing
+local live = {}                     -- full name -> { map, x, y, class, level, guild, guid, at }: those sharing
 local looks = {}                    -- class -> a dot's look
 local dirty = false
 local zoneByName, classByName, realm
@@ -75,6 +79,20 @@ end
 
 -- a realm as compared: no spaces, hyphens or apostrophes, any case
 local function Plain(rlm) return (rlm:gsub("[%s%-']", "")):lower() end
+
+-- Forever's numbered realms share a ruleset map. Compare the pool, not its shard number:
+-- CAMWOWEU5Realm4PvP and CAMWOWEU5Realm12PvP both become camwoweu5realmpvp.
+local function RealmPool(rlm)
+	local key = Plain(rlm)
+	if ns.Client == "Forever" then key = key:gsub("realm%d+", "realm") end
+	return key
+end
+
+local function SamePool(full)
+	local _, rlm = full:match("^([^%-]+)%-(.+)$")
+	local mine = Realm()
+	return rlm and mine ~= "" and RealmPool(rlm) == RealmPool(mine) or false
+end
 
 -- "Name-Realm" for a name as the game gives it (on your own realm it comes without one)
 local function Full(name, rlm)
@@ -119,8 +137,37 @@ local function IsMe(full)
 	return false
 end
 
-local function InGroup(full)
+-- Addon messages carry a name without a GUID. Match both parts of a Forever
+-- name when the sender and guild roster use different separators or realm labels.
+local function GuildNameKey(name)
+	if ns.Client ~= "Forever" then return end
+	local character, suffix = name:match("^(.+)%-([^%-]+)$")
+	if suffix then
+		local label = Plain(suffix)
+		local ownRealm = Safe.Call(GetNormalizedRealmName) or Safe.Call(GetRealmName)
+		if label:match("^camwow%a+%d+realm%d+%a+$") or (type(ownRealm) == "string" and label == Plain(ownRealm)) then
+			name = character
+		end
+	end
+	local first, surname = name:match("^([^%s%-]+)[%s%-]+([^%s%-]+)$")
+	if first then return (first .. "-" .. surname):lower() end
+end
+
+local function CharacterGUID(guid)
+	guid = Safe.Value(guid)
+	if type(guid) == "string" and guid ~= "" then return guid end
+end
+
+local function InGroup(full, guid)
 	if not IsInGroup() then return false end
+	if not guid then
+		local r = roster[full]
+		guid = r and r.guid
+	end
+	if guid then
+		local grouped = Safe.Call(C_PartyInfo and C_PartyInfo.IsGUIDInGroup, guid)
+		if grouped ~= nil then return grouped end
+	end
 	local short = Short(full)
 	return (Safe.Call(UnitInParty, short) or Safe.Call(UnitInRaid, short)) and true or false
 end
@@ -252,21 +299,31 @@ local function ScanGuild()
 	for i = 1, tonumber(Safe.Value(GetNumGuildMembers())) or 0 do
 		local name, _, _, level, _, area, _, _, online, _, class, _, _, _, _, _, guid = GetGuildRosterInfo(i)
 		local full = Safe.Value(online) and Full(name)
-		if full and guid ~= nil and not Safe.IsSecret(guid) and guid == Safe.Call(UnitGUID, "player") then
+		guid = CharacterGUID(guid)
+		if full and guid and guid == Safe.Call(UnitGUID, "player") then
 			selfFull = full   -- (you, as the guild writes you: your realm spelled that way from now on)
 			realm = full:match("%-(.+)$") or realm
 		elseif full and not IsMe(full) then
 			roster[full] = { name = Shown(full), class = Safe.Value(class), level = tonumber(Safe.Value(level)),
-				area = Safe.Value(area), guild = true }
+				area = Safe.Value(area), guild = true, guid = guid }
+			local key = guid and GuildNameKey(name)
+			if key then
+				local previous = guildGuids[key]
+				guildGuids[key] = (previous == nil or previous == guid) and guid or false
+			end
 		end
 	end
 end
 
-local function Friend(full, level, area, className, how)
-	if Short(full) == full and not roster[full] then return end   -- (a friend on another realm isn't on your map; a guild member is)
-	local r = roster[full] or { name = Shown(full), level = tonumber(Safe.Value(level)), area = Safe.Value(area),
+local function Friend(full, level, area, className, how, guid)
+	guid = CharacterGUID(guid)
+	local r = roster[full]
+	if r and r.guid and guid and r.guid ~= guid then return end
+	if not SamePool(full) and not r then return end   -- (a friend outside your realm pool isn't on your map; a guild member is)
+	r = r or { name = Shown(full), level = tonumber(Safe.Value(level)), area = Safe.Value(area),
 		class = ClassFile(Safe.Value(className)) }
 	r.friend = true
+	r.guid = r.guid or guid
 	roster[full] = r
 	-- (Battle.net reaches any realm, a whisper not every one: it's used when both are there)
 	if how.bn or not friends[full] then friends[full] = how end
@@ -277,7 +334,7 @@ local function ScanFriends()
 	for i = 1, tonumber(Safe.Value(C_FriendList.GetNumFriends())) or 0 do
 		local f = C_FriendList.GetFriendInfoByIndex(i)
 		local full = type(f) == "table" and Safe.Value(f.connected) and Full(f.name)
-		if full then Friend(full, f.level, f.area, f.className, { whisper = f.name }) end
+		if full then Friend(full, f.level, f.area, f.className, { whisper = f.name }, f.guid) end
 	end
 end
 
@@ -290,7 +347,7 @@ local function ScanBattleNet()
 		if type(g) == "table" and Safe.Value(g.isOnline) and g.clientProgram == (BNET_CLIENT_WOW or "WoW")
 			and (not WOW_PROJECT_ID or g.wowProjectID == WOW_PROJECT_ID) then
 			local full = Full(g.characterName, g.realmName)
-			if full then Friend(full, g.characterLevel, g.areaName, g.className, { bn = g.gameAccountID }) end
+			if full then Friend(full, g.characterLevel, g.areaName, g.className, { bn = g.gameAccountID }, g.playerGuid) end
 		end
 	end
 end
@@ -298,7 +355,7 @@ end
 local function Scan()
 	local before = {}
 	for full in pairs(friends) do before[full] = true end
-	wipe(roster) wipe(friends)
+	wipe(roster) wipe(guildGuids) wipe(friends)
 	for _, scan in ipairs({ ScanGuild, ScanFriends, ScanBattleNet }) do
 		local ok, err = pcall(scan)
 		if not ok then geterrorhandler()(err) end
@@ -307,7 +364,7 @@ local function Scan()
 		for full in pairs(t) do if IsMe(full) then t[full] = nil end end
 	end
 	-- a friend just online: a hello, to learn whether they use OpenMap (they learn you do)
-	if mod.db.friends or mod.db.friendsShare then
+	if mod.db.friends or mod.db.guild or mod.db.friendsShare then
 		for full in pairs(friends) do
 			if not before[full] then ToFriend(full, "H1") end
 		end
@@ -333,7 +390,32 @@ end
 -- Receiving
 --------------------------------------------------------------------------------
 
-local function Heard(full, text, guild)
+local function LocationGUID(full, place)
+	if place and place.guid then return place.guid end
+	local row = roster[full]
+	if row and row.guid then return row.guid end
+	-- (a guild message names its sender without a GUID: #107's name key finds it in the guild roster)
+	local key = place and place.guildKey
+	return key and guildGuids[key] or nil
+end
+
+local function StopLocation(full, guid)
+	guid = guid or LocationGUID(full, live[full])
+	if not guid then
+		if live[full] then live[full] = nil dirty = true end
+		return
+	end
+	-- A stop applies to the character's position on every channel.
+	for sender, place in pairs(live) do
+		local senderGUID = LocationGUID(sender, place)
+		if senderGUID == guid or (sender == full and not senderGUID) then
+			live[sender] = nil
+			dirty = true
+		end
+	end
+end
+
+local function Heard(full, text, guild, guid, sender)
 	local kind, m, x, y, class, level = strsplit("\t", text, 6)
 	if friends[full] then known[full] = true end
 	if kind == "H1" or kind == "H2" then
@@ -343,12 +425,16 @@ local function Heard(full, text, guild)
 	end
 	if not guild and not friends[full] then return end   -- (a whisper only from a friend)
 	if kind == "L0" then
-		if live[full] then live[full] = nil dirty = true end
+		StopLocation(full, guid)
 	elseif kind == "L1" then
 		m, x, y = tonumber(m), tonumber(x), tonumber(y)
 		if not (m and x and y) or x < 0 or x > 1 or y < 0 or y > 1 or not S.Rect(m) then return end
+		local row = roster[full]
+		if guid and row and row.guid and guid ~= row.guid then row = nil end
+		local previous = live[full]
 		live[full] = { map = m, x = x, y = y, class = class and class:match("^%u+$"), level = tonumber(level),
-			guild = guild or (roster[full] and roster[full].guild) or false, at = GetTime() }
+			guild = guild or (row and row.guild) or false, guildKey = sender and GuildNameKey(sender),
+			guid = guid or (row and row.guid) or (previous and previous.guid), at = GetTime() }
 		dirty = true
 	end
 end
@@ -359,7 +445,7 @@ local function OnAddonMessage(_, _, prefix, text, channel, from)
 	if channel ~= "GUILD" and channel ~= "WHISPER" then return end
 	local full = Full(from)
 	if not full or IsMe(full) then return end   -- (your own, sent to your guild)
-	Heard(full, text, channel == "GUILD")
+	Heard(full, text, channel == "GUILD", nil, from)
 end
 
 local function OnBattleNetMessage(_, _, prefix, text, _, id)
@@ -367,9 +453,11 @@ local function OnBattleNetMessage(_, _, prefix, text, _, id)
 	if Safe.IsSecret(text) or Safe.IsSecret(id) or type(text) ~= "string" or type(id) ~= "number" then return end
 	local g = C_BattleNet and C_BattleNet.GetGameAccountInfoByID and C_BattleNet.GetGameAccountInfoByID(id)
 	local full = type(g) == "table" and Full(g.characterName, g.realmName)
-	if not full or IsMe(full) or (g.playerGuid and g.playerGuid == Safe.Call(UnitGUID, "player")) then return end
+	if not full or IsMe(full) then return end
+	local guid = CharacterGUID(g.playerGuid)
+	if guid and guid == Safe.Call(UnitGUID, "player") then return end
 	friends[full] = friends[full] or { bn = id }     -- (a Battle.net friend, whatever the last scan saw)
-	Heard(full, text, false)
+	Heard(full, text, false, guid, g.characterName)
 end
 
 --------------------------------------------------------------------------------
@@ -391,7 +479,7 @@ local function Tag(guild) return guild and L["Guild"] or L["Friend"] end
 
 local function DotEnter(pin)
 	local d = pin.data
-	local r = roster[d.full]
+	local r = d.roster
 	GameTooltip:SetOwner(pin, "ANCHOR_RIGHT")
 	GameTooltip:AddLine(Shown(d.full), ClassColor(d.p.class or (r and r.class)))
 	local level = d.p.level or (r and r.level)
@@ -421,6 +509,13 @@ end
 
 local function ByName(a, b) return a.name < b.name end
 
+-- Merge identities for drawing while the roster and messages keep their sender keys.
+local function PersonFor(people, full, guid)
+	local key = guid or full
+	if not people[key] then people[key] = { full = full, guid = guid } end
+	return people[key]
+end
+
 local function Redraw()
 	dirty = false
 	if not S.IsBuilt() then return end
@@ -428,26 +523,49 @@ local function Redraw()
 	zoneSet = zoneSet or S.PinSet("friendzones", 0, 3)
 	S.ClearPinSet(dotSet)
 	S.ClearPinSet(zoneSet)
-	if not mod.db.friends or not mod.IsStitched() then return end
-	local now, zones = GetTime(), {}
+	if not (mod.db.friends or mod.db.guild) or not mod.IsStitched() then return end
+	local now, people, zones = GetTime(), {}, {}
+	for full, r in pairs(roster) do
+		local place = live[full]
+		local guid = r.guid or (place and now - place.at <= GONE_AFTER and place.guid)
+		local person = PersonFor(people, full, guid)
+		person.friend = person.friend or r.friend
+		person.guild = person.guild or r.guild
+		local zone = ZoneMap(r.area)
+		-- Prefer a known zone, then guild roster data when both sources have a zone.
+		local rank = (zone and 2 or 0) + (r.guild and 1 or 0)
+		if not person.roster or rank > person.rank or (rank == person.rank and full < person.full) then
+			person.roster, person.full, person.zone, person.rank = r, full, zone, rank
+		end
+	end
 	for full, p in pairs(live) do
 		if now - p.at > GONE_AFTER or IsMe(full) then
 			live[full] = nil
-		elseif not InGroup(full) then
+		else
+			p.guid = LocationGUID(full, p)
+			local person = PersonFor(people, full, p.guid)
+			person.friend = person.friend or friends[full]
+			person.guild = person.guild or p.guild
 			local u, v = mod.ToWorld(p.map, p.x, p.y)
-			if u then
-				local pin = S.AddPin(dotSet, u, v, DotLook(p.class), { full = full, p = p })
-				pin:SetScript("OnEnter", DotEnter)
-				pin:SetScript("OnLeave", GameTooltip_Hide)
+			local current = person.location
+			if u and (not current or p.at > current.at or (p.at == current.at and full < person.sender)) then
+				person.location, person.sender, person.u, person.v = p, full, u, v
 			end
 		end
 	end
-	-- the rest by zone: one badge each, in the middle of the zone
-	for full, r in pairs(roster) do
-		local id = not live[full] and not InGroup(full) and ZoneMap(r.area)
-		if id then
-			zones[id] = zones[id] or {}
-			tinsert(zones[id], r)
+	for _, person in pairs(people) do
+		local visible = (person.friend and mod.db.friends) or (person.guild and mod.db.guild)
+		if visible and not InGroup(person.full, person.guid) then
+			local p, id = person.location, person.zone
+			if p then
+				local pin = S.AddPin(dotSet, person.u, person.v, DotLook(p.class),
+					{ full = person.sender, p = p, roster = person.roster })
+				pin:SetScript("OnEnter", DotEnter)
+				pin:SetScript("OnLeave", GameTooltip_Hide)
+			elseif id then
+				zones[id] = zones[id] or {}
+				tinsert(zones[id], person.roster)
+			end
 		end
 	end
 	for id, people in pairs(zones) do
@@ -462,6 +580,18 @@ local function Redraw()
 		pin:SetScript("OnEnter", ZoneEnter)
 		pin:SetScript("OnLeave", GameTooltip_Hide)
 	end
+end
+
+-- what's known here of a player by name (Nav.lua's group dots, which this file leaves out of its
+-- own): u, v on the world from the place they share; else nil, nil and their zone's uiMapID from
+-- the guild roster or friends list; nothing if neither has them
+function mod.FriendPlace(name, rlm)
+	local full = Full(name, rlm)
+	if not full then return end
+	local p = live[full]
+	if p and GetTime() - p.at <= GONE_AFTER then return mod.ToWorld(p.map, p.x, p.y) end
+	local r = roster[full]
+	return nil, nil, r and ZoneMap(r.area)
 end
 
 function mod.RefreshFriends()
@@ -558,8 +688,10 @@ function mod:SetupFriends(worldMap)
 end
 
 function mod:FriendsOptions(opts, get, set, off)
-	opts.friends = { type = "toggle", name = L["Friends and guild"], order = 35.5, get = get, set = set, disabled = off,
-		desc = L["Your friends and guild members who are online: a badge on the zone each is in, with who's there (as the friends list and guild roster show it), or a class-coloured dot where they stand for those who use OpenMap and share where they are."] }
+	opts.friends = { type = "toggle", name = L["Friends on the map"], order = 35.45, get = get, set = set, disabled = off,
+		desc = L["Your friends who are online: a badge on the zone each is in, with who's there (as the friends list shows it), or a class-coloured dot where they stand for those who use OpenMap and share where they are."] }
+	opts.guild = { type = "toggle", name = L["Guild members on the map"], order = 35.5, get = get, set = set, disabled = off,
+		desc = L["Your guild members who are online: a badge on the zone each is in, with who's there (as the guild roster shows it), or a class-coloured dot where they stand for those who use OpenMap and share where they are."] }
 	opts.friendsShare = { type = "toggle", name = L["Share where you are"], order = 35.6, get = get, set = set, disabled = off,
 		desc = L["Your guild, and your friends who use OpenMap, see you as a dot where you stand on their map, sent every few seconds while you move. Never from inside a dungeon, raid or battleground. Off, they see only your zone, as the friends list and guild roster show it."] }
 end

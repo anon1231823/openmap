@@ -1,14 +1,14 @@
 --------------------------------------------------------------------------------
 -- Getting around the map:
 --   find me      a button that glides to where you are
---   reopen       choose player-centred, always remember, or remember
+--   reopen       choose player-centred, zone-centred, always remember, or remember
 --                only while the player is still inside the previous view
 --   waypoints    Ctrl-click the map to drop Blizzard's map pin there (and a
 --                TomTom arrow, if TomTom is on); click the pin to clear it
 --   search       type a zone, city, dungeon or flight master and glide to it
---   group        party and raid members as class-coloured dots, wherever they
---                are on the stitched map (Blizzard's own only show on the map
---                underneath)
+--   group        party and raid members as class-coloured dots with a gold
+--                border, wherever they are on the stitched map (Blizzard's own
+--                only show on the map underneath)
 --------------------------------------------------------------------------------
 
 local _, ns = ...
@@ -39,7 +39,7 @@ end
 --------------------------------------------------------------------------------
 
 function mod:FindMe(keepZoom)
-	if not mod.IsStitched() then return end
+	if not mod.IsStitched() and not (mod.PadViewOn and mod.PadViewOn()) then return end
 	local u, v, best = UnitWorld("player")
 	if not u then
 		-- the map underneath may still know (the zone you're in, shown)
@@ -106,6 +106,11 @@ function mod.SavedView(mapID, onlySaved)
 	-- own extra half that the wheel can still go to; with "zoom", the zoom it closed at)
 	local u, v, best = UnitWorld("player")
 	if u and mode == "zoom" and saved then return u, v, saved[3] end   -- (the zoom it closed at)
+	-- ("inzone": the whole zone you're in, in the middle, wherever you are in it: #143)
+	if u and mode == "inzone" and best then
+		local l, r, t, b = S.Rect(best)
+		if l then return (l + r) / 2, (t + b) / 2, math.min(mod.FitZoom(best), mod.db.maxZoom or math.huge) end
+	end
 	if u then return u, v, math.min(mod.FitZoom(best), mod.db.maxZoom or math.huge) end
 end
 
@@ -391,6 +396,25 @@ end
 
 local groupSet, groupLooks = nil, {}
 local DOT = { atlas = "WhiteCircle-RaidBlips", texture = "Interface\\Minimap\\PartyRaidBlips" }
+-- the border that says "your group" (a guild member's or friend's dot, Friends.lua, has none): the
+-- dot's own circle, larger and behind it, gold around a dark gap so it reads on every class's colour
+local RING = { atlas = DOT.atlas, texture = DOT.texture, color = { 1, 0.82, 0, 1 } }
+local RING_GAP = { atlas = DOT.atlas, texture = DOT.texture, color = { 0, 0, 0, 1 } }
+local RING_SIZE, RING_GAP_SIZE = 19, 15
+local ROUGH_ALPHA = 0.55            -- the dot of someone known only by zone
+local ROUGH_SPREAD = 0.006          -- world (normalized): between those known only by zone, in the same zone
+
+local function Ring(pin)
+	if pin.Ring then return end
+	pin.Ring = pin:CreateTexture(nil, "BACKGROUND")
+	pin.Ring:SetSize(RING_SIZE, RING_SIZE)
+	pin.Ring:SetPoint("CENTER")
+	S.Look(pin.Ring, RING)
+	pin.RingGap = pin:CreateTexture(nil, "BORDER")
+	pin.RingGap:SetSize(RING_GAP_SIZE, RING_GAP_SIZE)
+	pin.RingGap:SetPoint("CENTER")
+	S.Look(pin.RingGap, RING_GAP)
+end
 
 local function GroupLook(unit)
 	local _, class = UnitClass(unit)
@@ -408,34 +432,81 @@ local function GroupEnter(pin)
 	GameTooltip:SetOwner(pin, "ANCHOR_RIGHT")
 	local name = Safe.Call(UnitName, pin.unit)
 	GameTooltip:AddLine(name or "?", 1, 1, 1)
+	GameTooltip:AddLine(L["Group"], 1, 0.82, 0)
+	local info = pin.zone and C_Map.GetMapInfo(pin.zone)
+	if info and info.name then GameTooltip:AddLine(L["Somewhere in %s"]:format(info.name), 0.6, 0.6, 0.6) end
 	GameTooltip:Show()
+end
+
+-- where a group member is: u, v on the world when that's known (the game's, or the place they
+-- share with OpenMap: on this client the game can keep a group member's place secret), else
+-- nil, nil and the zone they're in (the game's, or as the guild roster and friends lists give it)
+local function GroupPlace(unit)
+	local u, v = UnitWorld(unit)
+	if u then return u, v end
+	local name, rlm = UnitName(unit)
+	local zone
+	u, v, zone = mod.FriendPlace(Safe.Value(name), Safe.Value(rlm))
+	if u then return u, v end
+	local best = Safe.Call(C_Map.GetBestMapForUnit, unit)
+	if best and S.Rect(best) then zone = best end
+	return nil, nil, zone
+end
+
+-- whether Blizzard's own dot, at the true place, already shows someone in this zone: the map
+-- underneath is the zone or one it lies in (none on the whole-world map)
+local function BlizzardShows(zone, host)
+	if not host or host == S.WORLD then return false end
+	while zone and zone ~= 0 do
+		if zone == host then return true end
+		local info = C_Map.GetMapInfo(zone)
+		zone = info and info.parentMapID
+	end
+	return false
+end
+
+-- the n-th known only by this zone: rows of five just below its middle, clear of its friends badge
+local function ZoneSpot(zone, n)
+	local l, r, t, b = S.Rect(zone)
+	local col, row = (n - 1) % 5, math.floor((n - 1) / 5)
+	return (l + r) / 2 + col * ROUGH_SPREAD, (t + b) / 2 + (row + 1) * ROUGH_SPREAD
 end
 
 local function RefreshGroup()
 	if not groupSet then return end
 	S.ClearPinSet(groupSet)
-	if not mod.db.group or not mod.IsStitched() or not IsInGroup() then return end
-	local host = mod.HostMap()
+	-- (the controller view, PadView.lua: Blizzard's map underneath unseen, so every one of them here)
+	local padView = mod.PadViewOn and mod.PadViewOn()
+	if not mod.db.group or not (mod.IsStitched() or padView) or not IsInGroup() then return end
+	local host = not padView and mod.HostMap() or nil
 	local raid = IsInRaid()
+	local inZone = {}
 	for i = 1, raid and 40 or 4 do
 		local unit = (raid and "raid" or "party") .. i
 		if UnitExists(unit) and not UnitIsUnit(unit, "player") then
-			-- Blizzard shows the ones on the map underneath; we show the rest
-			local onHost = host and Safe.Call(C_Map.GetPlayerMapPosition, host, unit)
-			if not onHost then
-				local u, v = UnitWorld(unit)
-				if u then
-					local pin = S.AddPin(groupSet, u, v, GroupLook(unit))
-					pin.unit = unit
-					pin:SetScript("OnEnter", GroupEnter)
-					pin:SetScript("OnLeave", GameTooltip_Hide)
-				end
+			-- every one known gets the bordered dot (over Blizzard's, on the map underneath: its plain
+			-- blip can't be told from a guild member's); by zone only if Blizzard's isn't there to place them
+			local u, v, zone = GroupPlace(unit)
+			if zone and not u and not BlizzardShows(zone, host) then
+				inZone[zone] = (inZone[zone] or 0) + 1
+				u, v = ZoneSpot(zone, inZone[zone])
+			end
+			if u then
+				local pin = S.AddPin(groupSet, u, v, GroupLook(unit))
+				pin.unit, pin.zone = unit, zone
+				Ring(pin)
+				if zone then pin.Icon:SetAlpha(ROUGH_ALPHA) end
+				pin:SetScript("OnEnter", GroupEnter)
+				pin:SetScript("OnLeave", GameTooltip_Hide)
 			end
 		end
 	end
 end
 
 --------------------------------------------------------------------------------
+
+function mod.RefreshWaypoint() RefreshWaypoint() end   -- (PadView.lua: it has no SetupNav)
+function mod.RefreshGroup() RefreshGroup() end         -- (PadView.lua: its own ticker)
 
 function mod:BuildNav()
 	wpSet = S.PinSet("waypoint", 0, 5)
@@ -477,9 +548,9 @@ end
 function mod:NavOptions(opts, get, set, off)
 	opts.reopenView = { type = "select", name = L["When reopening the map"], order = 11,
 		get = mod.GetReopenView, set = set, disabled = off,
-		values = { player = L["Center on player"], zoom = L["Center on player, keep zoom"], always = L["Always remember"],
-			visible = L["Remember while visible"] }, sorting = { "player", "zoom", "always", "visible" },
-		desc = L["Choose one behavior. Center on player: always open on you. Center on player, keep zoom: open on you, at the zoom you closed the map at. Always remember: restore your previous position and zoom, even after changing zones. Remember while visible: restore only if your current location is inside the previous view, even across zone boundaries. Otherwise, open on you. Maps opened for a quest still show the quest's area."] }
+		values = { player = L["Center on player"], zoom = L["Center on player, keep zoom"], inzone = L["Center on your zone"],
+			always = L["Always remember"], visible = L["Remember while visible"] }, sorting = { "player", "zoom", "inzone", "always", "visible" },
+		desc = L["Choose one behavior. Center on player: always open on you. Center on player, keep zoom: open on you, at the zoom you closed the map at. Center on your zone: open on the whole zone you're in, wherever you are in it. Always remember: restore your previous position and zoom, even after changing zones. Remember while visible: restore only if your current location is inside the previous view, even across zone boundaries. Otherwise, open on you. Maps opened for a quest still show the quest's area."] }
 	opts.group = { type = "toggle", name = L["Party and raid members"], order = 35, get = get, set = set, disabled = off,
 		desc = L["Class-coloured dots for your group anywhere on the stitched map."] }
 end

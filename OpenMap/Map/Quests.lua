@@ -51,13 +51,15 @@ local function Enter(pin)
 			if text and not finished then GameTooltip:AddLine((_G.QUEST_DASH or "- ") .. text, 1, 1, 1, true) end
 		end
 	end
-	GameTooltip:AddLine(L["Click: track this quest and zoom to it"], 0.6, 0.6, 0.6)
+	GameTooltip:AddLine((map and map.IsMaximized and map:IsMaximized()) and L["Click: track this quest and zoom to it"]
+		or L["Click: track this quest, zoom to it and show it in the quest log"], 0.6, 0.6, 0.6)
 	GameTooltip:Show()
 end
 
--- a click: the quest tracked (as Blizzard's own quest icons do) and the view in on it, the map kept as it is,
--- full screen or windowed. (It opened the quest's details, and Blizzard opens those in the windowed map
--- with its quest log: full screen was left.) With the quest log beside the map, its details there too
+-- a click: the quest tracked (as Blizzard's own quest icons do), the view in on it, and on the windowed
+-- map its details in the quest log beside it, opened if it was closed. Not full screen: Blizzard's
+-- details call takes the map out of full screen into the windowed map with its log. Never in combat:
+-- opening the log lays the window out again
 local ZOOM_TO = 6
 local function Click(pin)
 	local q = pin.data
@@ -74,7 +76,12 @@ local function Click(pin)
 	if mod.PadWaits and mod.PadWaits() then return end
 	local log = map and map.QuestLog
 	local details = G("QuestMapFrame_ShowQuestDetails")
-	if log and log:IsShown() and details and not (map.IsMaximized and map:IsMaximized()) then details(q.id) end
+	if not log or not details or (map.IsMaximized and map:IsMaximized()) then return end
+	if not log:IsShown() and not InCombatLockdown() and map.HandleUserActionOpenSidePanel then
+		map:HandleUserActionOpenSidePanel()
+		if map.SidePanelToggle and map.SidePanelToggle.Refresh then map.SidePanelToggle:Refresh() end
+	end
+	if log:IsShown() then details(q.id) end
 end
 
 -- the state mark over a pin's badge (made once: pins are pooled, and this set's are only ever quests)

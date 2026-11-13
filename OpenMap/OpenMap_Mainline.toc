@@ -64,6 +64,7 @@ Map\Sketch.lua
 Map\Debug.lua
 Map\Bench.lua
 Map\Gamepad.lua
+Map\PadView.lua
 Map\Report.lua
 Map\Nav.lua
 Map\Combat.lua

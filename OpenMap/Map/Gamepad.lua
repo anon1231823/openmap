@@ -60,6 +60,24 @@ local function Under(x, y, noPins)
 	return nil, false
 end
 
+-- for PadView.lua: OpenMap's control under (x, y) (its dungeon's map, its windows), and whether one is in the way
+function mod.PadControlAt(x, y) return Under(x, y, true) end
+
+-- for PadView.lua: the topmost of OpenMap's frames under (x, y) that takes the mouse wheel (the menu's list ...),
+-- for the right stick to scroll it
+local wheel, wheelLevel
+local function FindWheel(f, x, y)
+	if not f:IsVisible() then return end
+	if f:IsMouseWheelEnabled() and f:GetScript("OnMouseWheel") and Inside(f, x, y)
+		and (not wheel or Height(f) >= wheelLevel) then wheel, wheelLevel = f, Height(f) end
+	for _, child in ipairs({ f:GetChildren() }) do FindWheel(child, x, y) end
+end
+function mod.PadWheelAt(x, y)
+	wheel, wheelLevel = nil, nil
+	for _, root in ipairs(roots) do FindWheel(root, x, y) end
+	return wheel
+end
+
 local function Enter(f)
 	if f == hovered then return end
 	local was = hovered
@@ -167,6 +185,13 @@ local function SetupPadKeys(worldMap)
 		if type(worldMap[name]) == "function" then hooksecurefunc(worldMap, name, PadKeys) end
 	end
 	worldMap:HookScript("OnHide", PadKeys)
+	-- a quest's details opening or closing changes whose B it is (PadKeys: Blizzard's own while they're
+	-- open), and the footer doesn't always say so
+	local details = QuestMapFrame and QuestMapFrame.DetailsFrame
+	if details and details.HookScript then
+		details:HookScript("OnShow", PadKeys)
+		details:HookScript("OnHide", PadKeys)
+	end
 	ns.RegisterEvent(keyOwner, "PLAYER_REGEN_ENABLED", function() if waiting then PadKeys() end end)
 	ns.RegisterEvent(keyOwner, "INPUT_DEVICE_INTERFACE_TRANSITION", PadKeys)
 end

@@ -1,0 +1,9 @@
+{
+ "2999": {"name": "Ruins of Lordaeron", "floors": [
+  {"name": "Lordaeron", "z": [0, 200], "rect": [16340, 15120, 17070, 15845]},
+  {"name": "The Undercity", "z": [-200, 0], "rect": [16340, 15120, 17070, 15845]}
+ ]},
+ "3065": {"name": "The Hall of Thanes", "floors": [
+  {"name": "The Hall of Thanes"}
+ ]}
+}

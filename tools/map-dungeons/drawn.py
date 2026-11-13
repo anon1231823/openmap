@@ -1,7 +1,7 @@
 # Builds the maps of WoW Forever's own dungeons, which the game has no map of: maps drawn by
 # players who let OpenMap use them (art/drawn/dungeons, and its README), credited on the map.
 #   OpenMap/Media/Textures/Forever/MapDungeonDrawn/<mapID>_<n>.tga   the picture in Blizzard's dungeon map
-#                                       (<drawing>_<n>.tga for one known by its name)
+#                                       (<drawing>_<n>.tga for one originally packaged by name)
 #                                       layout: 1002 x 668 in 4 x 3 tiles of 256 px (Map/Dungeons.lua's)
 #   OpenMap/Data/DungeonDrawn.lua       per instance: its floor's tiles and who drew it
 #
@@ -22,13 +22,15 @@ PIC_W, PIC_H = 1002, 668
 # tables have no mapID for yet (Places.lua's 0) by its name instead, as Places.lua spells it
 DRAWN = {
     2959: ("city-of-dalaran.png", "City of Dalaran", "Santiago Reyes"),
+    2970: ("the-drowned-city.jpg", "The Drowned City", "Santiago Reyes"),
     2998: ("excavation-site-wetlands.png", "Excavation Site: Wetlands", "Santiago Reyes"),
     2999: ("ruins-of-lordaeron.png", "Ruins of Lordaeron", "Santiago Reyes"),
+    3001: ("shapers-terrace.webp", "Shaper's Terrace", "Santiago Reyes"),
+    3039: ("kroldok-stronghold.webp", "Krol'dok Stronghold", "Santiago Reyes"),
     3065: ("hall-of-thanes.png", "The Hall of Thanes", "Santiago Reyes"),
-    "The Drowned City": ("the-drowned-city.jpg", "The Drowned City", "Santiago Reyes"),
-    "Krol'dok Stronghold": ("kroldok-stronghold.webp", "Krol'dok Stronghold", "Santiago Reyes"),
-    "Shaper's Terrace": ("shapers-terrace.webp", "Shaper's Terrace", "Santiago Reyes"),
 }
+# Keep the texture filenames of drawings originally keyed by name.
+NAME_STEM_IDS = {2970, 3001, 3039}
 
 
 def lua_str(s):
@@ -52,7 +54,7 @@ def main():
         "ns.MapDungeonDrawn = {",
     ]
     for mid, (art, name, credit) in sorted(DRAWN.items(), key=lambda kv: (isinstance(kv[0], str), str(kv[0]))):
-        stem = str(mid) if isinstance(mid, int) else art.rsplit(".", 1)[0]
+        stem = art.rsplit(".", 1)[0] if isinstance(mid, str) or mid in NAME_STEM_IDS else str(mid)
         im = Image.open(os.path.join(ART, art)).convert("RGB").resize((PIC_W, PIC_H), Image.LANCZOS)
         page = Image.new("RGB", (1024, 768))
         page.paste(im, (0, 0))

@@ -4,12 +4,16 @@
 # zlib chunks (map textures aren't encrypted).
 #
 #   python -P tools/casc/casc.py <World of Warcraft folder> <file ID> <out file> [product]
-#   product: the install's product in .build.info (WoW Forever's is wow_classic_beta)
+#   product: the install's product in .build.info (WoW Forever's is wowf; it was wow_classic_beta,
+#   and either name finds whichever the install has)
 #
 # From the tools: Casc(folder, product).read(fid) -> bytes (KeyError: not in this install).
 # The install is whatever build the launcher last updated it to, which can be newer than
 # the build the tools' tables name.
 import bisect, os, struct, sys, zlib
+
+# WoW Forever's product was renamed (wow_classic_beta, then wowf): either name finds the install
+RENAMED = {"wowf": ("wow_classic_beta",), "wow_classic_beta": ("wowf",)}
 
 import numpy as np
 
@@ -51,7 +55,7 @@ def blte(data):
 
 
 class Casc:
-    def __init__(self, folder, product="wow_classic_beta"):
+    def __init__(self, folder, product="wowf"):
         self.data = os.path.join(folder, "Data")
         cfg = self._config(self._build_key(folder, product))
         self._indices()
@@ -63,10 +67,11 @@ class Casc:
     def _build_key(folder, product):
         lines = open(os.path.join(folder, ".build.info"), encoding="utf-8").read().splitlines()
         names = [h.split("!")[0] for h in lines[0].split("|")]
-        for line in lines[1:]:
-            row = dict(zip(names, line.split("|")))
-            if row.get("Product") == product and row.get("Active", "1") == "1":
-                return row["Build Key"]
+        rows = [dict(zip(names, line.split("|"))) for line in lines[1:]]
+        for name in (product,) + RENAMED.get(product, ()):
+            for row in rows:
+                if row.get("Product") == name and row.get("Active", "1") == "1":
+                    return row["Build Key"]
         raise KeyError("no product %s in .build.info" % product)
 
     def _config(self, key):
@@ -211,7 +216,7 @@ class Casc:
 
 if __name__ == "__main__":
     folder, fid, out = sys.argv[1], int(sys.argv[2]), sys.argv[3]
-    c = Casc(folder, sys.argv[4] if len(sys.argv) > 4 else "wow_classic_beta")
+    c = Casc(folder, sys.argv[4] if len(sys.argv) > 4 else "wowf")
     data = c.read(fid)
     open(out, "wb").write(data)
     print("wrote", out, len(data), "bytes")

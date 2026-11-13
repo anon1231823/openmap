@@ -59,8 +59,8 @@ class NavigationTests(unittest.TestCase):
             assert(not opts.rememberView and not opts.rememberViewInView)
             local count = 0
             for _ in pairs(opts.reopenView.values) do count = count + 1 end
-            assert(count == 4)
-            for _, mode in ipairs({ 'player', 'zoom', 'always', 'visible' }) do
+            assert(count == 5)
+            for _, mode in ipairs({ 'player', 'zoom', 'inzone', 'always', 'visible' }) do
                 opts.reopenView.set({ 'reopenView' }, mode)
                 assert(opts.reopenView.get({ 'reopenView' }) == mode)
             end
@@ -118,6 +118,18 @@ class NavigationTests(unittest.TestCase):
             assert(mod.SavedView(999) == nil)
         """)
 
+    def test_inzone_mode_opens_on_the_whole_zone(self):
+        # (#143: the zone you're in, in the middle at its fitting zoom, wherever you are in it)
+        self.lua.execute("""
+            mod.db.reopenView = 'inzone'
+            mod:OnMapHidden()
+            playerU, playerV = .8, .7
+            local u, v, zoom = mod.SavedView()
+            assert(u == .5 and v == .5 and zoom == 8)
+            assert(mod.SavedView(999) == nil)
+            assert(mod.SavedView(nil, true) == nil)   -- (not a saved view: Blizzard's own opening isn't moved again)
+        """)
+
     def test_player_mode_never_restores(self):
         self.lua.execute("""
             mod.db.reopenView = 'player'
@@ -164,7 +176,7 @@ class NavigationTests(unittest.TestCase):
                     choices[#choices + 1] = row
                 end
             end
-            assert(#choices == 4)
+            assert(#choices == 5)
             function mod:Refresh() end
             for _, selected in ipairs(choices) do
                 selected[3](true)

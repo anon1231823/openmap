@@ -23,8 +23,8 @@ local LIT_FADE = { 3, 12 }      -- zoom over which the hover's lift fades away (
 local EASE = 8                  -- how fast a route eases to its new alpha (per second)
 local HOVER_PX = 8              -- how near the cursor must come
 local BLUE, RED = { 0.20, 0.42, 0.88 }, { 0.72, 0.13, 0.10 }
--- goblin ports: Booty Bay, Ratchet and Powderfuse Port have a flight master for each faction
--- (TaxiNodes 18 / 19, 80, 3274 / 3275); every other boat is the Alliance's
+-- goblin ports: Booty Bay and Ratchet have a flight master for each faction (TaxiNodes 18 / 19, 80),
+-- Powderfuse Port none yet (its nodes 3274 / 3275 have no flight master in game); every other boat is the Alliance's
 local NEUTRAL = { ["Booty Bay - Ratchet"] = true, ["Steamwheedle Port - Powderfuse Port"] = true }
 -- the kinds drawn (Zephras Isle's airships wait for its map: its continent can't be placed yet)
 local KINDS = { boat = true, zeppelin = true }

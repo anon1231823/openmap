@@ -83,11 +83,20 @@ local function Marks()
 	return table.concat(circles, ";")
 end
 
+-- PadView.lua's controller view on (Blizzard's map left as it is, OpenMap's drawn over it)
+local function PadView() return mod.PadViewOn and mod.PadViewOn() or false end
+
 local function Code(note)
 	local u, v, zoom = mod.ViewNow()
 	if where and where.u then u, v = where.u, where.v end   -- (a dungeon's map: where its entrance is)
 	note = (note or ""):gsub("[|\n\r]", " ")
-	return ("OM1|%s|%d|%.5f|%.5f|%.2f|%s|%s"):format(ns.version, map:GetMapID() or 0, u or 0, v or 0, zoom or 0,
+	-- (the map: Blizzard's underneath, or with the controller view, unseen there, the zone in view)
+	local mapID = map:GetMapID() or 0
+	if PadView() and u then
+		local chain = ns.MapStitch.ChainAt(u, v)
+		mapID = chain[#chain] or mapID
+	end
+	return ("OM1|%s|%d|%.5f|%.5f|%.2f|%s|%s"):format(ns.version, mapID, u or 0, v or 0, zoom or 0,
 		Marks(), note)
 end
 
@@ -123,6 +132,10 @@ function mod:ShowReportCode(code)
 		codeFrame = CreateFrame("Frame", "OpenMapReport", UIParent)
 		if mod.padRoots then mod.padRoots[#mod.padRoots + 1] = codeFrame end   -- (the gamepad's cursor presses its buttons: Gamepad.lua)
 		codeFrame:SetPoint("CENTER")
+		if PadView() and map and map.ScrollContainer then    -- (in the map's view: the pad's cursor can't leave it)
+			codeFrame:ClearAllPoints()
+			codeFrame:SetPoint("CENTER", map.ScrollContainer, "CENTER")
+		end
 		codeFrame:SetFrameStrata("DIALOG")
 		codeFrame:EnableMouse(true)
 		codeFrame:SetMovable(true)
@@ -133,7 +146,7 @@ function mod:ShowReportCode(code)
 		-- (the map window's own frame, its title bar and X, as What's new's)
 		local top = ns.Look:Window(codeFrame, L["Report a problem"])
 		codeFrame:SetSize(540, 196 + top)
-		tinsert(UISpecialFrames, "OpenMapReport")
+		if not PadView() then tinsert(UISpecialFrames, "OpenMapReport") end   -- (the Gamepad UI reads that list)
 		local function Field(label, y)
 			y = y - top
 			local fs = codeFrame:CreateFontString(nil, "OVERLAY", "GameFontNormal")
@@ -170,6 +183,9 @@ end
 local function Next(list, place)
 	drawn, where = list or {}, place
 	if not place and mod.HoldSketch and #drawn > 0 then mod.HoldSketch(drawn) end
+	-- (the controller view: no note step. The game's popups take the pad through the Gamepad UI's own
+	-- code, which one opened from OpenMap's runs as OpenMap's: the code at once, the note in the issue)
+	if PadView() then mod:ShowReportCode(Code("")) return end
 	StaticPopup_Show("OPENMAP_REPORT_NOTE")
 end
 
@@ -200,7 +216,7 @@ function mod:ToggleReport(on)
 		return
 	end
 	-- Blizzard's own maps (not stitched): nothing to draw on, but the problem can still be said
-	if not mod.IsStitched() then Next() return end
+	if not (mod.IsStitched() or PadView()) then Next() return end
 	mod:ToggleSketch(true, nil, nil, {
 		head = L["Report a problem"],
 		title = L["|cffffd100Step 1 of 2:|r draw where it's wrong (if it's a spot), then Next"],

@@ -10,7 +10,7 @@ CLIENTS = {
     # folder: under Data/ and Media/Textures/; toc: in OpenMap/; build: the tables' and textures' on
     # wago.tools; product: the install's CASC product (tools/casc, OPENMAP_WOW); changelog: its release notes
     # (the in-game What's new, Data/<folder>/Changelog.lua, and its file's notes on CurseForge)
-    "forever": {"folder": "Forever", "toc": "OpenMap.toc", "build": "1.60.1.70245", "product": "wow_classic_beta",
+    "forever": {"folder": "Forever", "toc": "OpenMap.toc", "build": "1.60.1.70245", "product": "wowf",
                 "changelog": "CHANGELOG.md"},
     "retail": {"folder": "Retail", "toc": "OpenMap_Mainline.toc", "build": "12.1.5.70448", "product": "wow",
                "changelog": "CHANGELOG-retail.md"},
